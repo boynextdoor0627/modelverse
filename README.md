@@ -12,6 +12,8 @@ MODELVERSE 是一个中英双语的交互式三维语言模型图谱：公司是
 - Search and filtering by model, company, type, industry, and use case
 - Company-centered planetary systems with close-up parameter cards
 - Model detail panels sourced from the project catalog
+- A reviewed catalog of 500–720 models across 60+ companies
+- Weekly catalog refreshes from OpenRouter and verified Hugging Face organizations
 
 ## Local development
 
@@ -32,4 +34,10 @@ pnpm run build
 
 ## Data
 
-The interactive catalog is stored in `public/models.json`. Update this file to refresh the models shown in the universe.
+The original curated spreadsheet data is preserved in `data/curated-models.json`. It has the highest priority during every refresh. Public model registries are then merged, normalized, deduplicated, and screened to remove aliases, quantized copies, adapters, and model merges.
+
+```bash
+pnpm run catalog:update
+```
+
+The generated catalog is written to `public/models.json`, with an audit summary in `data/catalog-report.json`. GitHub Actions runs this refresh every Monday and commits genuine catalog changes automatically. The trusted organization mapping is maintained in `data/source-registry.json`.

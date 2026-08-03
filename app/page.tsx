@@ -147,15 +147,15 @@ export default function Home() {
       const seconds = time / 1000; const groups: Array<{ depth: number; company: string; color: string; center: Point3; planets: Point3[]; models: Model[] }> = [];
       companies.forEach((company, companyIndex) => {
         const models = visible.filter((model) => model.company === company); if (!models.length) return;
-        const angle = companyIndex * 2.39996; const radius = 375 + (companyIndex % 4) * 68; const drift = 7 + companyIndex % 8;
-        const center = { x: Math.cos(angle) * radius + Math.sin(seconds * .19 + companyIndex) * drift, y: Math.sin(angle) * (245 + (companyIndex % 3) * 24) + Math.cos(seconds * .16 + companyIndex) * drift, z: Math.sin(angle * 1.63) * 315 + Math.sin(seconds * .14 + companyIndex) * drift };
+        const longitude = companyIndex * 2.399963; const vertical = 1 - 2 * ((companyIndex + .5) / Math.max(companies.length, 1));
+        const radial = Math.sqrt(Math.max(0, 1 - vertical * vertical)); const shell = 475 + (companyIndex % 4) * 58; const drift = 7 + companyIndex % 8;
+        const center = { x: Math.cos(longitude) * radial * shell + Math.sin(seconds * .19 + companyIndex) * drift, y: vertical * shell * .72 + Math.cos(seconds * .16 + companyIndex) * drift, z: Math.sin(longitude) * radial * shell + Math.sin(seconds * .14 + companyIndex) * drift };
         const planets = models.map((model, index) => {
           const seed = Math.abs(hash(model.name));
-          const shell = Math.floor(index / 7);
-          const orbitRadius = 42 + shell * 25 + (seed % 13);
+          const orbitRadius = 42 + Math.sqrt(index) * 10.5 + (seed % 9);
           const direction = seed % 2 ? 1 : -1;
-          const speed = .095 + (seed % 17) * .0045;
-          const phase = (seed % 628) / 100 + seconds * speed * direction;
+          const speed = .075 + (seed % 17) * .0035;
+          const phase = (seed % 628) / 100 + seconds * speed * direction + index * 2.399963;
           const inclination = ((seed % 95) - 47) * Math.PI / 180;
           const float = Math.sin(seconds * .43 + seed) * 3.5;
           return {
