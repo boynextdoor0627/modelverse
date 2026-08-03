@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import type { CSSProperties } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, PointerEvent as ReactPointerEvent, WheelEvent as ReactWheelEvent } from "react";
 
 type Model = {
   id: string; name: string; company: string; companyOrder: number; type: string;
@@ -31,12 +31,20 @@ function typeMatches(type: string, filter: string) {
   return /Code|代码/.test(type);
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value));
+}
+
 export default function Home() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("全部");
   const [selected, setSelected] = useState<Model | null>(null);
   const [focusedCompany, setFocusedCompany] = useState<string | null>(null);
+  const [camera, setCamera] = useState({ x: 0, y: 0, scale: 1 });
+  const activePointers = useRef(new Map<number, { x: number; y: number }>());
+  const gesture = useRef({ centerX: 0, centerY: 0, distance: 0, moved: false });
+  const suppressClick = useRef(false);
 
   useEffect(() => {
     fetch("/models.json").then((response) => response.json()).then(setCatalog);
@@ -56,13 +64,61 @@ export default function Home() {
     });
   }, [catalog, query, filter, focusedCompany]);
 
+  function pointerCenter() {
+    const points = [...activePointers.current.values()];
+    const centerX = points.reduce((sum, point) => sum + point.x, 0) / points.length;
+    const centerY = points.reduce((sum, point) => sum + point.y, 0) / points.length;
+    const distance = points.length > 1 ? Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y) : 0;
+    return { centerX, centerY, distance };
+  }
+
+  function onPointerDown(event: ReactPointerEvent<HTMLElement>) {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    activePointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    gesture.current = { ...pointerCenter(), moved: false };
+  }
+
+  function onPointerMove(event: ReactPointerEvent<HTMLElement>) {
+    if (!activePointers.current.has(event.pointerId)) return;
+    activePointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    const next = pointerCenter();
+    const dx = next.centerX - gesture.current.centerX;
+    const dy = next.centerY - gesture.current.centerY;
+    if (Math.abs(dx) + Math.abs(dy) > 1) gesture.current.moved = true;
+    setCamera((current) => {
+      const nextScale = next.distance && gesture.current.distance
+        ? clamp(current.scale * (next.distance / gesture.current.distance), .55, 2.4)
+        : current.scale;
+      return { x: current.x + dx, y: current.y + dy, scale: nextScale };
+    });
+    gesture.current = { ...next, moved: gesture.current.moved };
+  }
+
+  function onPointerEnd(event: ReactPointerEvent<HTMLElement>) {
+    suppressClick.current = gesture.current.moved;
+    activePointers.current.delete(event.pointerId);
+    if (activePointers.current.size) gesture.current = { ...pointerCenter(), moved: false };
+    window.setTimeout(() => { suppressClick.current = false; }, 80);
+  }
+
+  function onWheel(event: ReactWheelEvent<HTMLElement>) {
+    event.preventDefault();
+    if (event.ctrlKey || event.metaKey) {
+      setCamera((current) => ({ ...current, scale: clamp(current.scale * Math.exp(-event.deltaY * .008), .55, 2.4) }));
+    } else {
+      setCamera((current) => ({ ...current, x: current.x - event.deltaX, y: current.y - event.deltaY }));
+    }
+  }
+
+  const resetView = () => setCamera({ x: 0, y: 0, scale: 1 });
+
   if (!catalog) return <main className="loading"><div className="boot-ring" /><p>正在唤醒模型宇宙</p></main>;
 
   return (
     <main className="universe">
       <div className="nebula nebula-a" /><div className="nebula nebula-b" /><div className="scanlines" />
       <header className="topbar">
-        <button className="brand" onClick={() => { setFocusedCompany(null); setQuery(""); }} aria-label="返回完整模型宇宙">
+        <button className="brand" onClick={() => { setFocusedCompany(null); setQuery(""); resetView(); }} aria-label="返回完整模型宇宙">
           <span className="brand-mark">M</span><span><b>MODELVERSE</b><small>语言模型全景图谱</small></span>
         </button>
         <label className="searchbox">
@@ -85,14 +141,15 @@ export default function Home() {
         </div>
       </aside>
 
-      <section className="space" aria-label="模型星图">
+      <section className="space" aria-label="可拖拽和缩放的模型星图" onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd} onWheel={onWheel}>
         <div className="space-heading">
           <p>NEURAL CONSTELLATION / 2026</p>
           <h1>{focusedCompany || (query ? `“${query}” 的轨迹` : "智能，正在连接")}</h1>
-          <span>{visible.length} 个模型节点 · 点击星体查看档案</span>
+          <span>{visible.length} 个模型节点 · 拖拽探索 · 双指平移 / 捏合缩放</span>
         </div>
-        <div className="orbit-core"><span /><b>AI</b><small>MODEL<br/>CORE</small></div>
-        {companies.map((company, companyIndex) => {
+        <div className="cosmos-field" style={{ transform: `translate3d(${camera.x}px, ${camera.y}px, 0) scale(${camera.scale})` }}>
+          <div className="orbit-core"><span /><b>AI</b><small>MODEL<br/>CORE</small></div>
+          {companies.map((company, companyIndex) => {
           const companyModels = visible.filter((model) => model.company === company);
           if (!companyModels.length) return null;
           const color = COLORS[companyIndex % COLORS.length];
@@ -101,8 +158,9 @@ export default function Home() {
           const ry = 31 + ((companyIndex + 1) % 3) * 6;
           const cx = 50 + Math.cos(angle) * rx;
           const cy = 53 + Math.sin(angle) * ry;
-          return <div className="galaxy" key={company} style={{ "--gx": `${cx}%`, "--gy": `${cy}%`, "--c": color } as CSSProperties}>
-            <button className="galaxy-label" onClick={() => setFocusedCompany(company)}><i />{company}<small>{companyModels.length}</small></button>
+          const driftSeed = Math.abs(hash(company));
+          return <div className="galaxy" key={company} style={{ "--gx": `${cx}%`, "--gy": `${cy}%`, "--c": color, "--drift-x": `${8 + driftSeed % 17}px`, "--drift-y": `${6 + driftSeed % 13}px`, "--drift-duration": `${12 + driftSeed % 15}s`, "--drift-delay": `${-(driftSeed % 11)}s` } as CSSProperties}>
+            <button className="galaxy-label" onClick={() => { if (!suppressClick.current) setFocusedCompany(company); }}><i />{company}<small>{companyModels.length}</small></button>
             <div className="galaxy-ring" />
             {companyModels.slice(0, focusedCompany ? 48 : 14).map((model, index) => {
               const seed = Math.abs(hash(model.name));
@@ -111,12 +169,19 @@ export default function Home() {
               const x = Math.cos(nodeAngle) * radius;
               const y = Math.sin(nodeAngle) * radius * .58;
               const size = 7 + (seed % 9);
-              return <button key={model.id} className={`model-node ${selected?.id === model.id ? "selected" : ""}`} style={{ "--x": `${x}px`, "--y": `${y}px`, "--s": `${size}px`, "--delay": `${(seed % 28) / 10}s` } as CSSProperties} onClick={() => setSelected(model)} title={`${model.name} · ${model.type}`} aria-label={`查看 ${model.name}`}><span /><b>{model.name}</b></button>;
+              return <button key={model.id} className={`model-node ${selected?.id === model.id ? "selected" : ""}`} style={{ "--x": `${x}px`, "--y": `${y}px`, "--s": `${size}px`, "--delay": `${(seed % 28) / 10}s` } as CSSProperties} onClick={() => { if (!suppressClick.current) setSelected(model); }} title={`${model.name} · ${model.type}`} aria-label={`查看 ${model.name}`}><span /><b>{model.name}</b></button>;
             })}
           </div>;
-        })}
-        {!visible.length && <div className="empty-state"><b>未发现对应星体</b><span>换一个关键词，或清除筛选条件</span><button onClick={() => { setQuery(""); setFilter("全部"); setFocusedCompany(null); }}>重置星图</button></div>}
-        <div className="coordinates">X 37.224&nbsp;&nbsp; Y 88.016&nbsp;&nbsp; Z 2048<br/><span>DRAG FIELD · SELECT NODE</span></div>
+          })}
+          {!visible.length && <div className="empty-state"><b>未发现对应星体</b><span>换一个关键词，或清除筛选条件</span><button onClick={() => { setQuery(""); setFilter("全部"); setFocusedCompany(null); }}>重置星图</button></div>}
+        </div>
+        <div className="view-controls" aria-label="星图视角控制">
+          <button onClick={() => setCamera((current) => ({ ...current, scale: clamp(current.scale + .18, .55, 2.4) }))} aria-label="放大">＋</button>
+          <span>{Math.round(camera.scale * 100)}%</span>
+          <button onClick={() => setCamera((current) => ({ ...current, scale: clamp(current.scale - .18, .55, 2.4) }))} aria-label="缩小">−</button>
+          <button className="reset-view" onClick={resetView} aria-label="复位视角">◎</button>
+        </div>
+        <div className="coordinates">X {Math.round(camera.x)}&nbsp;&nbsp; Y {Math.round(camera.y)}&nbsp;&nbsp; Z {Math.round(camera.scale * 2048)}<br/><span>DRAG · TRACKPAD · PINCH TO EXPLORE</span></div>
       </section>
 
       <footer className="statusbar">
