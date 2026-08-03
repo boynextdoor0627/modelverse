@@ -14,6 +14,7 @@ type Model = {
 type Catalog = { meta: { modelCount: number; companyCount: number; generatedAt: string; sourceNote: string }; models: Model[] };
 type Point3 = { x: number; y: number; z: number };
 type ScreenNode = { x: number; y: number; radius: number; depth: number; model: Model };
+type ScreenCompany = { x: number; y: number; radius: number; depth: number; company: string };
 
 const COLORS = ["#58f6ff", "#8d7dff", "#ff6fcf", "#ffae57", "#77ffb4", "#74a5ff", "#f7ff78"];
 const FILTERS = ["all", "llm", "reasoning", "multimodal", "code"] as const;
@@ -21,7 +22,7 @@ const UI = {
   zh: {
     subtitle: "语言模型全景图谱", search: "搜索模型、公司、行业或应用场景…", online: "数据核心在线",
     modelClass: "模型类型", galaxies: "公司星系", allGalaxies: "全部星系", heading: "智能，正在连接",
-    hint: "拖拽旋转 · 滚轮缩放 · 双指移动与捏合", source: "数据", companies: "个公司星系", updated: "更新于",
+    hint: "点击公司恒星展开 · 拖拽旋转 · 滚轮缩放", source: "数据", companies: "个公司星系", updated: "更新于",
     sync: "重新同步", reset: "复位视角", micro: "微观参数视图", noResult: "未发现对应模型", resetMap: "重置星图",
     modelNode: "模型节点", description: "模型简介", totalParams: "总参数", context: "上下文", maxOutput: "最大输出",
     release: "发布日期", access: "开放方式", multimodal: "多模态", reasoning: "思考模式", inputPrice: "输入价格",
@@ -31,7 +32,7 @@ const UI = {
   en: {
     subtitle: "THE LANGUAGE MODEL ATLAS", search: "Search models, companies, industries or use cases…", online: "DATA CORE ONLINE",
     modelClass: "MODEL CLASS", galaxies: "GALAXIES", allGalaxies: "All galaxies", heading: "INTELLIGENCE, CONNECTED",
-    hint: "Drag to orbit · Wheel to zoom · Two-finger pan and pinch", source: "Source", companies: "company galaxies", updated: "Updated",
+    hint: "Select a company star · Drag to orbit · Wheel to zoom", source: "Source", companies: "company galaxies", updated: "Updated",
     sync: "Resync", reset: "Reset view", micro: "MICRO PARAMETER VIEW", noResult: "No matching models", resetMap: "Reset map",
     modelNode: "MODEL NODE", description: "Model profile", totalParams: "Parameters", context: "Context", maxOutput: "Max output",
     release: "Released", access: "Access", multimodal: "Multimodal", reasoning: "Reasoning", inputPrice: "Input price",
@@ -70,7 +71,9 @@ export default function Home() {
   const [zoom, setZoom] = useState(100);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const nodesRef = useRef<ScreenNode[]>([]);
+  const companyNodesRef = useRef<ScreenCompany[]>([]);
   const hoveredId = useRef<string | null>(null);
+  const hoveredCompany = useRef<string | null>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const gesture = useRef({ x: 0, y: 0, distance: 0, moved: false });
   const camera = useRef({ yaw: -.18, pitch: .12, distance: 1200, targetYaw: -.18, targetPitch: .12, targetDistance: 1200, panX: 0, panY: 0, targetPanX: 0, targetPanY: 0 });
@@ -154,8 +157,11 @@ export default function Home() {
         const center = visibleCompanies.length === 1
           ? { x: 0, y: 0, z: 0 }
           : { x: Math.cos(longitude) * radial * shell + Math.sin(seconds * .19 + companyIndex) * drift, y: vertical * shell * .72 + Math.cos(seconds * .16 + companyIndex) * drift, z: Math.sin(longitude) * radial * shell + Math.sin(seconds * .14 + companyIndex) * drift };
+        const isolated = visibleCompanies.length === 1;
         const closeUp = clamp((820 - c.distance) / 360, 0, 1);
-        const systemRadius = (62 + Math.sqrt(models.length) * 9) * (1 + closeUp * 1.2);
+        const compactRadius = clamp(34 + Math.sqrt(models.length) * 4.5, 46, 92);
+        const expandedRadius = (68 + Math.sqrt(models.length) * 10) * (1 + closeUp * .55);
+        const systemRadius = isolated ? expandedRadius : compactRadius;
         const systemSpeed = .055 + (Math.abs(hash(company)) % 9) * .003;
         const systemDirection = Math.abs(hash(company)) % 2 ? 1 : -1;
         const planets = models.map((model, index) => {
@@ -175,6 +181,7 @@ export default function Home() {
       });
       groups.sort((a, b) => a.depth - b.depth);
       const hitNodes: ScreenNode[] = [];
+      const companyHitNodes: ScreenCompany[] = [];
       groups.forEach((group) => {
         const star = project(group.center);
         if (star) {
@@ -184,6 +191,10 @@ export default function Home() {
           corona.addColorStop(0, "rgba(255,255,255,.98)"); corona.addColorStop(.12, group.color); corona.addColorStop(.42, rgba(group.color, .34)); corona.addColorStop(1, rgba(group.color, 0));
           ctx.globalAlpha = clamp(star.scale * 1.2, .48, 1); ctx.fillStyle = corona; ctx.beginPath(); ctx.arc(star.x, star.y, starRadius * 3.6, 0, Math.PI * 2); ctx.fill();
           ctx.globalAlpha = 1; ctx.fillStyle = "#f2ffff"; ctx.beginPath(); ctx.arc(star.x, star.y, starRadius * .48, 0, Math.PI * 2); ctx.fill();
+          if (hoveredCompany.current === group.company) {
+            ctx.strokeStyle = "rgba(236,255,255,.96)"; ctx.lineWidth = 1.2; ctx.beginPath(); ctx.arc(star.x, star.y, Math.max(14, starRadius * 2), 0, Math.PI * 2); ctx.stroke();
+          }
+          companyHitNodes.push({ x: star.x, y: star.y, radius: Math.max(20, starRadius * 2.2), depth: star.depth, company: group.company });
         }
         for (let i = 0; i < group.models.length; i++) {
           const p = project(group.planets[i]); if (!p || p.x < -30 || p.x > width + 30 || p.y < -30 || p.y > height + 30) continue;
@@ -206,7 +217,8 @@ export default function Home() {
         if (label) { ctx.globalAlpha = clamp(label.scale * 1.05, .38, .98); ctx.fillStyle = group.color; ctx.font = "9px monospace"; ctx.textAlign = "center"; ctx.fillText(`${group.company} · ${group.models.length}`, label.x, label.y); ctx.textAlign = "start"; }
       });
       nodesRef.current = hitNodes.sort((a, b) => a.depth - b.depth);
-      if (c.distance < 570) hitNodes.sort((a, b) => Math.hypot(a.x - width / 2, a.y - height / 2) - Math.hypot(b.x - width / 2, b.y - height / 2)).slice(0, 6).forEach(drawCard);
+      companyNodesRef.current = companyHitNodes.sort((a, b) => a.depth - b.depth);
+      if (visibleCompanies.length === 1 && c.distance < 570) hitNodes.sort((a, b) => Math.hypot(a.x - width / 2, a.y - height / 2) - Math.hypot(b.x - width / 2, b.y - height / 2)).slice(0, 6).forEach(drawCard);
       ctx.globalAlpha = 1;
       frame = requestAnimationFrame(render);
     };
@@ -221,10 +233,13 @@ export default function Home() {
   function onPointerDown(event: ReactPointerEvent<HTMLCanvasElement>) { event.currentTarget.setPointerCapture(event.pointerId); pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY }); gesture.current = { ...pointerCenter(), moved: false }; }
   function onPointerMove(event: ReactPointerEvent<HTMLCanvasElement>) {
     if (!pointers.current.has(event.pointerId)) {
-      const rect = event.currentTarget.getBoundingClientRect(); const node = pickNode(event.clientX - rect.left, event.clientY - rect.top, event.pointerType, true);
-      hoveredId.current = node?.model.id ?? null; event.currentTarget.style.cursor = node ? "pointer" : "grab"; return;
+      const rect = event.currentTarget.getBoundingClientRect(); const x = event.clientX - rect.left; const y = event.clientY - rect.top;
+      const company = visibleCompanies.length > 1 ? pickCompany(x, y, event.pointerType) : undefined;
+      const node = company ? undefined : pickNode(x, y, event.pointerType, true);
+      hoveredCompany.current = company?.company ?? null; hoveredId.current = node?.model.id ?? null;
+      event.currentTarget.style.cursor = company || node ? "pointer" : "grab"; return;
     }
-    hoveredId.current = null; pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY }); const next = pointerCenter(); const dx = next.x - gesture.current.x; const dy = next.y - gesture.current.y;
+    hoveredId.current = null; hoveredCompany.current = null; pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY }); const next = pointerCenter(); const dx = next.x - gesture.current.x; const dy = next.y - gesture.current.y;
     if (Math.abs(dx) + Math.abs(dy) > 2) gesture.current.moved = true;
     const c = camera.current;
     if (pointers.current.size > 1) { c.targetPanX += dx; c.targetPanY += dy; if (next.distance && gesture.current.distance) c.targetDistance = clamp(c.targetDistance / (next.distance / gesture.current.distance), 410, 1800); setZoom(Math.round(120000 / c.targetDistance)); }
@@ -233,7 +248,11 @@ export default function Home() {
   }
   function onPointerEnd(event: ReactPointerEvent<HTMLCanvasElement>) {
     const wasMoved = gesture.current.moved; pointers.current.delete(event.pointerId);
-    if (!wasMoved) { const rect = event.currentTarget.getBoundingClientRect(); const node = pickNode(event.clientX - rect.left, event.clientY - rect.top, event.pointerType); if (node) setSelected(node.model); }
+    if (!wasMoved) {
+      const rect = event.currentTarget.getBoundingClientRect(); const x = event.clientX - rect.left; const y = event.clientY - rect.top;
+      const company = visibleCompanies.length > 1 ? pickCompany(x, y, event.pointerType) : undefined;
+      if (company) focusCompany(company.company); else { const node = pickNode(x, y, event.pointerType); if (node) setSelected(node.model); }
+    }
     if (pointers.current.size) gesture.current = { ...pointerCenter(), moved: false };
   }
   function pickNode(x: number, y: number, pointerType: string, hover = false) {
@@ -243,7 +262,19 @@ export default function Home() {
       .filter(({ node, distance }) => distance <= Math.max(node.radius, magnet))
       .sort((a, b) => a.distance - b.distance || a.node.depth - b.node.depth)[0]?.node;
   }
-  function onPointerLeave(event: ReactPointerEvent<HTMLCanvasElement>) { if (!pointers.current.size) { hoveredId.current = null; event.currentTarget.style.cursor = "grab"; } }
+  function pickCompany(x: number, y: number, pointerType: string) {
+    const magnet = pointerType === "touch" ? 42 : 26;
+    return companyNodesRef.current
+      .map((node) => ({ node, distance: Math.hypot(node.x - x, node.y - y) }))
+      .filter(({ node, distance }) => distance <= Math.max(node.radius, magnet))
+      .sort((a, b) => a.distance - b.distance || a.node.depth - b.node.depth)[0]?.node;
+  }
+  function focusCompany(company: string) {
+    setFocusedCompany(company); setSelected(null); hoveredCompany.current = null;
+    const c = camera.current; Object.assign(c, { targetDistance: 760, targetPanX: 0, targetPanY: 0 }); setZoom(158);
+  }
+  function showAllGalaxies() { setFocusedCompany(null); setSelected(null); hoveredId.current = null; hoveredCompany.current = null; resetView(); }
+  function onPointerLeave(event: ReactPointerEvent<HTMLCanvasElement>) { if (!pointers.current.size) { hoveredId.current = null; hoveredCompany.current = null; event.currentTarget.style.cursor = "grab"; } }
   function onWheel(event: ReactWheelEvent<HTMLCanvasElement>) { event.preventDefault(); const c = camera.current; c.targetDistance = clamp(c.targetDistance * Math.exp(event.deltaY * .00115), 410, 1800); setZoom(Math.round(120000 / c.targetDistance)); }
   function resetView() { const c = camera.current; Object.assign(c, { yaw: -.18, pitch: .12, distance: 1200, targetYaw: -.18, targetPitch: .12, targetDistance: 1200, panX: 0, panY: 0, targetPanX: 0, targetPanY: 0 }); setZoom(100); }
   function zoomBy(factor: number) { const c = camera.current; c.targetDistance = clamp(c.targetDistance * factor, 410, 1800); setZoom(Math.round(120000 / c.targetDistance)); }
@@ -253,11 +284,11 @@ export default function Home() {
 
   return <main className="universe">
     <header className="topbar">
-      <button className="brand" onClick={() => { setFocusedCompany(null); setQuery(""); resetView(); }}><span className="brand-mark">M</span><span><b>MODELVERSE</b><small>{t.subtitle}</small></span></button>
+      <button className="brand" onClick={() => { setQuery(""); showAllGalaxies(); }}><span className="brand-mark">M</span><span><b>MODELVERSE</b><small>{t.subtitle}</small></span></button>
       <label className="searchbox"><span>⌕</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={t.search} />{query && <button onClick={() => setQuery("")}>×</button>}</label>
       <div className="top-actions"><div className="language"><button className={lang === "zh" ? "active" : ""} onClick={() => setLang("zh")}>中文</button><button className={lang === "en" ? "active" : ""} onClick={() => setLang("en")}>EN</button></div><div className="system-state"><i />{t.online}<b>{catalog.meta.modelCount}</b></div></div>
     </header>
-    <aside className="left-rail"><p className="eyebrow">{t.modelClass}</p><nav>{FILTERS.map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}><span />{t.filters[item]}</button>)}</nav><div className="rail-divider" /><p className="eyebrow">{t.galaxies}</p><div className="company-list"><button className={!focusedCompany ? "active" : ""} onClick={() => setFocusedCompany(null)}>{t.allGalaxies}<em>{companies.length}</em></button>{companies.map((company) => <button key={company} className={focusedCompany === company ? "active" : ""} onClick={() => setFocusedCompany(company)}>{company}<em>{catalog.models.filter((model) => model.company === company).length}</em></button>)}</div></aside>
+    <aside className="left-rail"><p className="eyebrow">{t.modelClass}</p><nav>{FILTERS.map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}><span />{t.filters[item]}</button>)}</nav><div className="rail-divider" /><p className="eyebrow">{t.galaxies}</p><div className="company-list"><button className={!focusedCompany ? "active" : ""} onClick={showAllGalaxies}>{t.allGalaxies}<em>{companies.length}</em></button>{companies.map((company) => <button key={company} className={focusedCompany === company ? "active" : ""} onClick={() => focusCompany(company)}>{company}<em>{catalog.models.filter((model) => model.company === company).length}</em></button>)}</div></aside>
     <section className="space"><canvas ref={canvasRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd} onPointerLeave={onPointerLeave} onWheel={onWheel} aria-label={lang === "zh" ? "可旋转缩放的三维模型宇宙" : "Interactive 3D model universe"} />
       <div className="space-heading"><p>ATOMIC MODEL CONSTELLATION / 2026</p><h1>{focusedCompany || (query ? `“${query}”` : t.heading)}</h1><span>{visible.length} MODELS · {t.hint}</span></div>
       <div className="view-controls"><button onClick={() => zoomBy(.82)}>＋</button><span>{zoom}%</span><button onClick={() => zoomBy(1.22)}>−</button><button onClick={resetView} title={t.reset}>◎</button></div>
