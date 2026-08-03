@@ -16,6 +16,8 @@ type Catalog = {
   models: Model[];
 };
 
+type Point3D = { x: number; y: number; z: number };
+
 const COLORS = ["#58f6ff", "#8d7dff", "#ff6fcf", "#ffae57", "#77ffb4", "#74a5ff", "#f7ff78"];
 const TYPE_FILTERS = ["全部", "语言", "推理", "多模态", "代码"];
 
@@ -35,13 +37,26 @@ function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));
 }
 
+function segmentStyle(from: Point3D, to: Point3D): CSSProperties {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const dz = to.z - from.z;
+  const length = Math.hypot(dx, dy, dz);
+  const yaw = Math.atan2(dz, dx);
+  const pitch = Math.atan2(dy, Math.hypot(dx, dz));
+  return {
+    width: `${length}px`,
+    transform: `translate3d(${from.x}px, ${from.y}px, ${from.z}px) rotateY(${-yaw}rad) rotateZ(${pitch}rad)`,
+  };
+}
+
 export default function Home() {
   const [catalog, setCatalog] = useState<Catalog | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState("全部");
   const [selected, setSelected] = useState<Model | null>(null);
   const [focusedCompany, setFocusedCompany] = useState<string | null>(null);
-  const [camera, setCamera] = useState({ x: 0, y: 0, scale: 1 });
+  const [camera, setCamera] = useState({ x: 0, y: 0, scale: 1, yaw: -8, pitch: 8 });
   const activePointers = useRef(new Map<number, { x: number; y: number }>());
   const gesture = useRef({ centerX: 0, centerY: 0, distance: 0, moved: false });
   const suppressClick = useRef(false);
@@ -86,10 +101,13 @@ export default function Home() {
     const dy = next.centerY - gesture.current.centerY;
     if (Math.abs(dx) + Math.abs(dy) > 1) gesture.current.moved = true;
     setCamera((current) => {
-      const nextScale = next.distance && gesture.current.distance
-        ? clamp(current.scale * (next.distance / gesture.current.distance), .55, 2.4)
-        : current.scale;
-      return { x: current.x + dx, y: current.y + dy, scale: nextScale };
+      if (activePointers.current.size > 1) {
+        const nextScale = next.distance && gesture.current.distance
+          ? clamp(current.scale * (next.distance / gesture.current.distance), .48, 3.4)
+          : current.scale;
+        return { ...current, x: current.x + dx, y: current.y + dy, scale: nextScale };
+      }
+      return { ...current, yaw: current.yaw + dx * .24, pitch: clamp(current.pitch - dy * .18, -58, 58) };
     });
     gesture.current = { ...next, moved: gesture.current.moved };
   }
@@ -104,13 +122,13 @@ export default function Home() {
   function onWheel(event: ReactWheelEvent<HTMLElement>) {
     event.preventDefault();
     if (event.ctrlKey || event.metaKey) {
-      setCamera((current) => ({ ...current, scale: clamp(current.scale * Math.exp(-event.deltaY * .008), .55, 2.4) }));
+      setCamera((current) => ({ ...current, scale: clamp(current.scale * Math.exp(-event.deltaY * .008), .48, 3.4) }));
     } else {
       setCamera((current) => ({ ...current, x: current.x - event.deltaX, y: current.y - event.deltaY }));
     }
   }
 
-  const resetView = () => setCamera({ x: 0, y: 0, scale: 1 });
+  const resetView = () => setCamera({ x: 0, y: 0, scale: 1, yaw: -8, pitch: 8 });
 
   if (!catalog) return <main className="loading"><div className="boot-ring" /><p>正在唤醒模型宇宙</p></main>;
 
@@ -145,43 +163,60 @@ export default function Home() {
         <div className="space-heading">
           <p>NEURAL CONSTELLATION / 2026</p>
           <h1>{focusedCompany || (query ? `“${query}” 的轨迹` : "智能，正在连接")}</h1>
-          <span>{visible.length} 个模型节点 · 拖拽探索 · 双指平移 / 捏合缩放</span>
+          <span>{visible.length} 个模型节点 · 拖拽旋转空间 · 双指平移 / 捏合缩放</span>
         </div>
-        <div className="cosmos-field" style={{ transform: `translate3d(${camera.x}px, ${camera.y}px, 0) scale(${camera.scale})` }}>
-          <div className="orbit-core"><span /><b>AI</b><small>MODEL<br/>CORE</small></div>
+        <div className="cosmos-viewport">
+        <div className={`cosmos-field ${camera.scale >= 2.15 ? "detail-zoom" : ""}`} style={{ "--yaw": `${camera.yaw}deg`, "--pitch": `${camera.pitch}deg`, transform: `translate3d(${camera.x}px, ${camera.y}px, 0) scale(${camera.scale}) rotateX(${camera.pitch}deg) rotateY(${camera.yaw}deg)` } as CSSProperties}>
+          <div className="core-title">MODELVERSE · 语言模型基因图谱</div>
           {companies.map((company, companyIndex) => {
           const companyModels = visible.filter((model) => model.company === company);
           if (!companyModels.length) return null;
           const color = COLORS[companyIndex % COLORS.length];
-          const angle = (companyIndex / companies.length) * Math.PI * 2 - Math.PI / 2;
-          const rx = 34 + (companyIndex % 3) * 5;
-          const ry = 31 + ((companyIndex + 1) % 3) * 6;
-          const cx = 50 + Math.cos(angle) * rx;
-          const cy = 53 + Math.sin(angle) * ry;
+          const angle = companyIndex * 2.39996;
+          const radius = 250 + (companyIndex % 4) * 62;
+          const gx = Math.cos(angle) * radius;
+          const gy = Math.sin(angle) * (165 + (companyIndex % 3) * 34);
+          const gz = Math.sin(angle * 1.73) * 340 + ((companyIndex % 3) - 1) * 90;
           const driftSeed = Math.abs(hash(company));
-          return <div className="galaxy" key={company} style={{ "--gx": `${cx}%`, "--gy": `${cy}%`, "--c": color, "--drift-x": `${8 + driftSeed % 17}px`, "--drift-y": `${6 + driftSeed % 13}px`, "--drift-duration": `${12 + driftSeed % 15}s`, "--drift-delay": `${-(driftSeed % 11)}s` } as CSSProperties}>
+          const shownModels = companyModels.slice(0, focusedCompany ? 42 : 14);
+          const helix = shownModels.map((model, index) => {
+            const t = index * .82 + (driftSeed % 17) * .08;
+            const y = (index - (shownModels.length - 1) / 2) * 22;
+            return {
+              model,
+              primary: { x: Math.cos(t) * 58, y, z: Math.sin(t) * 58 },
+              pair: { x: -Math.cos(t) * 58, y, z: -Math.sin(t) * 58 },
+            };
+          });
+          return <div className="galaxy" key={company} style={{ "--gx": `${gx}px`, "--gy": `${gy}px`, "--gz": `${gz}px`, "--c": color, "--drift-x": `${7 + driftSeed % 13}px`, "--drift-y": `${5 + driftSeed % 9}px`, "--drift-z": `${8 + driftSeed % 19}px`, "--drift-duration": `${14 + driftSeed % 16}s`, "--drift-delay": `${-(driftSeed % 11)}s` } as CSSProperties}>
             <button className="galaxy-label" onClick={() => { if (!suppressClick.current) setFocusedCompany(company); }}><i />{company}<small>{companyModels.length}</small></button>
-            <div className="galaxy-ring" />
-            {companyModels.slice(0, focusedCompany ? 48 : 14).map((model, index) => {
+            <div className="gene-axis" />
+            {helix.map((node, index) => <div className="gene-links" key={`links-${node.model.id}`}>
+              <i className="dna-rung" style={segmentStyle(node.primary, node.pair)} />
+              {index > 0 && <><i className="dna-segment strand-a" style={segmentStyle(helix[index - 1].primary, node.primary)} /><i className="dna-segment strand-b" style={segmentStyle(helix[index - 1].pair, node.pair)} /></>}
+              <i className="gene-pair" style={{ transform: `translate3d(${node.pair.x}px, ${node.pair.y}px, ${node.pair.z}px)` }} />
+            </div>)}
+            {helix.map(({ model, primary }, index) => {
               const seed = Math.abs(hash(model.name));
-              const nodeAngle = (index / Math.max(companyModels.length, 6)) * Math.PI * 2 + (seed % 30) / 20;
-              const radius = 42 + (seed % 74);
-              const x = Math.cos(nodeAngle) * radius;
-              const y = Math.sin(nodeAngle) * radius * .58;
               const size = 7 + (seed % 9);
-              return <button key={model.id} className={`model-node ${selected?.id === model.id ? "selected" : ""}`} style={{ "--x": `${x}px`, "--y": `${y}px`, "--s": `${size}px`, "--delay": `${(seed % 28) / 10}s` } as CSSProperties} onClick={() => { if (!suppressClick.current) setSelected(model); }} title={`${model.name} · ${model.type}`} aria-label={`查看 ${model.name}`}><span /><b>{model.name}</b></button>;
+              return <button key={model.id} className={`model-node ${selected?.id === model.id ? "selected" : ""}`} style={{ "--x": `${primary.x}px`, "--y": `${primary.y}px`, "--z": `${primary.z}px`, "--s": `${size}px`, "--delay": `${(seed % 28) / 10}s` } as CSSProperties} onClick={() => { if (!suppressClick.current) setSelected(model); }} title={`${model.name} · ${model.type}`} aria-label={`查看 ${model.name}`}>
+                <span className="node-glow" />
+                <div className="model-card"><b>{model.name}</b><small><em>参数</em>{model.params || "未公开"}</small><small><em>上下文</em>{model.context || "—"}</small><small><em>大小</em>{model.size || "—"}</small></div>
+              </button>;
             })}
           </div>;
           })}
           {!visible.length && <div className="empty-state"><b>未发现对应星体</b><span>换一个关键词，或清除筛选条件</span><button onClick={() => { setQuery(""); setFilter("全部"); setFocusedCompany(null); }}>重置星图</button></div>}
         </div>
+        </div>
         <div className="view-controls" aria-label="星图视角控制">
-          <button onClick={() => setCamera((current) => ({ ...current, scale: clamp(current.scale + .18, .55, 2.4) }))} aria-label="放大">＋</button>
+          <button onClick={() => setCamera((current) => ({ ...current, scale: clamp(current.scale + .22, .48, 3.4) }))} aria-label="放大">＋</button>
           <span>{Math.round(camera.scale * 100)}%</span>
-          <button onClick={() => setCamera((current) => ({ ...current, scale: clamp(current.scale - .18, .55, 2.4) }))} aria-label="缩小">−</button>
+          <button onClick={() => setCamera((current) => ({ ...current, scale: clamp(current.scale - .22, .48, 3.4) }))} aria-label="缩小">−</button>
           <button className="reset-view" onClick={resetView} aria-label="复位视角">◎</button>
         </div>
-        <div className="coordinates">X {Math.round(camera.x)}&nbsp;&nbsp; Y {Math.round(camera.y)}&nbsp;&nbsp; Z {Math.round(camera.scale * 2048)}<br/><span>DRAG · TRACKPAD · PINCH TO EXPLORE</span></div>
+        {camera.scale >= 2.15 && <div className="micro-mode">MICRO VIEW · 模型参数已展开</div>}
+        <div className="coordinates">PITCH {Math.round(camera.pitch)}°&nbsp;&nbsp; YAW {Math.round(camera.yaw)}°&nbsp;&nbsp; Z {Math.round(camera.scale * 2048)}<br/><span>ORBIT · TRACKPAD · PINCH TO EXPLORE</span></div>
       </section>
 
       <footer className="statusbar">
