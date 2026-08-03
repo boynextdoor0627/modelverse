@@ -125,11 +125,6 @@ export default function Home() {
       const scale = 880 / depth;
       return { x: width / 2 + camera.current.panX + r.x * scale, y: height / 2 + camera.current.panY + r.y * scale, scale, depth };
     }
-    function line(a: Point3, b: Point3, color: string, alpha: number, lineWidth = 1) {
-      const p1 = project(a), p2 = project(b); if (!p1 || !p2) return;
-      ctx.globalAlpha = alpha; ctx.strokeStyle = color; ctx.lineWidth = lineWidth;
-      ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-    }
     function drawCard(node: ScreenNode) {
       const model = node.model; const x = clamp(node.x + 12, 8, width - 168); const y = clamp(node.y + 12, 8, height - 92);
       ctx.globalAlpha = .96; ctx.fillStyle = "rgba(3,14,26,.94)"; ctx.strokeStyle = "rgba(93,235,255,.32)"; ctx.lineWidth = 1;
@@ -149,29 +144,53 @@ export default function Home() {
       const background = ctx.createRadialGradient(width * .5, height * .52, 0, width * .5, height * .52, Math.max(width, height) * .68);
       background.addColorStop(0, "#0a1d2c"); background.addColorStop(.45, "#050d1a"); background.addColorStop(1, "#020610"); ctx.fillStyle = background; ctx.fillRect(0, 0, width, height);
       starSeed.forEach((star) => { ctx.globalAlpha = star.a; ctx.fillStyle = "#c8fbff"; ctx.fillRect(star.x * width, star.y * height, 1, 1); });
-      const seconds = time / 1000; const groups: Array<{ depth: number; company: string; color: string; primary: Point3[]; pair: Point3[]; models: Model[] }> = [];
+      const seconds = time / 1000; const groups: Array<{ depth: number; company: string; color: string; center: Point3; planets: Point3[]; models: Model[] }> = [];
       companies.forEach((company, companyIndex) => {
         const models = visible.filter((model) => model.company === company); if (!models.length) return;
-        const angle = companyIndex * 2.39996; const radius = 330 + (companyIndex % 3) * 52; const drift = 8 + companyIndex % 9;
-        const center = { x: Math.cos(angle) * radius + Math.sin(seconds * .22 + companyIndex) * drift, y: Math.sin(angle) * 210 + Math.cos(seconds * .18 + companyIndex) * drift, z: Math.sin(angle * 1.7) * 260 + Math.sin(seconds * .16 + companyIndex) * drift };
-        const primary: Point3[] = [], pair: Point3[] = [];
-        models.forEach((model, index) => { const theta = index * .72 + companyIndex * .31; const y = (index - (models.length - 1) / 2) * 18; primary.push({ x: center.x + Math.cos(theta) * 54, y: center.y + y, z: center.z + Math.sin(theta) * 54 }); pair.push({ x: center.x - Math.cos(theta) * 54, y: center.y + y, z: center.z - Math.sin(theta) * 54 }); });
-        groups.push({ depth: rotate(center).z, company, color: COLORS[companyIndex % COLORS.length], primary, pair, models });
+        const angle = companyIndex * 2.39996; const radius = 375 + (companyIndex % 4) * 68; const drift = 7 + companyIndex % 8;
+        const center = { x: Math.cos(angle) * radius + Math.sin(seconds * .19 + companyIndex) * drift, y: Math.sin(angle) * (245 + (companyIndex % 3) * 24) + Math.cos(seconds * .16 + companyIndex) * drift, z: Math.sin(angle * 1.63) * 315 + Math.sin(seconds * .14 + companyIndex) * drift };
+        const planets = models.map((model, index) => {
+          const seed = Math.abs(hash(model.name));
+          const shell = Math.floor(index / 7);
+          const orbitRadius = 42 + shell * 25 + (seed % 13);
+          const direction = seed % 2 ? 1 : -1;
+          const speed = .095 + (seed % 17) * .0045;
+          const phase = (seed % 628) / 100 + seconds * speed * direction;
+          const inclination = ((seed % 95) - 47) * Math.PI / 180;
+          const float = Math.sin(seconds * .43 + seed) * 3.5;
+          return {
+            x: center.x + Math.cos(phase) * orbitRadius,
+            y: center.y + Math.sin(phase) * orbitRadius * Math.sin(inclination) + float,
+            z: center.z + Math.sin(phase) * orbitRadius * Math.cos(inclination),
+          };
+        });
+        groups.push({ depth: rotate(center).z, company, color: COLORS[companyIndex % COLORS.length], center, planets, models });
       });
       groups.sort((a, b) => a.depth - b.depth);
       const hitNodes: ScreenNode[] = [];
       groups.forEach((group) => {
-        for (let i = 0; i < group.models.length; i++) {
-          line(group.primary[i], group.pair[i], group.color, .18, .7);
-          if (i > 0) { line(group.primary[i - 1], group.primary[i], group.color, .58, 1.25); line(group.pair[i - 1], group.pair[i], group.color, .32, 1); }
-          const pair = project(group.pair[i]); if (pair) { ctx.globalAlpha = clamp(pair.scale * .45, .15, .65); ctx.fillStyle = group.color; ctx.beginPath(); ctx.arc(pair.x, pair.y, clamp(pair.scale * 2.1, 1, 3.2), 0, Math.PI * 2); ctx.fill(); }
-          const p = project(group.primary[i]); if (!p || p.x < -30 || p.x > width + 30 || p.y < -30 || p.y > height + 30) continue;
-          const radius = clamp(p.scale * 4.2, 1.7, 8.5); ctx.globalAlpha = clamp(p.scale * .8, .28, 1); ctx.fillStyle = group.color; ctx.shadowColor = group.color; ctx.shadowBlur = radius * 2.4;
-          ctx.beginPath(); ctx.arc(p.x, p.y, radius, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
-          hitNodes.push({ x: p.x, y: p.y, radius: Math.max(9, radius + 4), depth: p.depth, model: group.models[i] });
+        const star = project(group.center);
+        if (star) {
+          const pulse = 1 + Math.sin(seconds * 1.35 + Math.abs(hash(group.company))) * .13;
+          const starRadius = clamp(star.scale * 9.5 * pulse, 4.2, 18);
+          const corona = ctx.createRadialGradient(star.x, star.y, 0, star.x, star.y, starRadius * 3.6);
+          corona.addColorStop(0, "rgba(255,255,255,.98)"); corona.addColorStop(.12, group.color); corona.addColorStop(.42, rgba(group.color, .34)); corona.addColorStop(1, rgba(group.color, 0));
+          ctx.globalAlpha = clamp(star.scale * 1.2, .48, 1); ctx.fillStyle = corona; ctx.beginPath(); ctx.arc(star.x, star.y, starRadius * 3.6, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = 1; ctx.fillStyle = "#f2ffff"; ctx.beginPath(); ctx.arc(star.x, star.y, starRadius * .48, 0, Math.PI * 2); ctx.fill();
         }
-        const top = group.primary.reduce((best, point) => point.y < best.y ? point : best, group.primary[0]); const label = top && project({ ...top, y: top.y - 27 });
-        if (label) { ctx.globalAlpha = clamp(label.scale * .9, .3, .9); ctx.fillStyle = group.color; ctx.font = "9px monospace"; ctx.textAlign = "center"; ctx.fillText(`${group.company} · ${group.models.length}`, label.x, label.y); ctx.textAlign = "start"; }
+        for (let i = 0; i < group.models.length; i++) {
+          const p = project(group.planets[i]); if (!p || p.x < -30 || p.x > width + 30 || p.y < -30 || p.y > height + 30) continue;
+          const seed = Math.abs(hash(group.models[i].name));
+          const breath = 1 + Math.sin(seconds * (1.05 + (seed % 7) * .06) + seed) * .19;
+          const planetRadius = clamp(p.scale * (3.7 + seed % 5) * breath, 1.8, 11);
+          const planetGlow = ctx.createRadialGradient(p.x - planetRadius * .28, p.y - planetRadius * .34, .2, p.x, p.y, planetRadius * 1.85);
+          planetGlow.addColorStop(0, "rgba(255,255,255,.96)"); planetGlow.addColorStop(.18, group.color); planetGlow.addColorStop(.62, rgba(group.color, .7)); planetGlow.addColorStop(1, rgba(group.color, 0));
+          ctx.globalAlpha = clamp(p.scale * .92, .32, 1); ctx.fillStyle = planetGlow; ctx.beginPath(); ctx.arc(p.x, p.y, planetRadius * 1.85, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = .9; ctx.fillStyle = group.color; ctx.beginPath(); ctx.arc(p.x, p.y, planetRadius * .58, 0, Math.PI * 2); ctx.fill();
+          hitNodes.push({ x: p.x, y: p.y, radius: Math.max(10, planetRadius + 4), depth: p.depth, model: group.models[i] });
+        }
+        const label = project({ ...group.center, y: group.center.y - 36 });
+        if (label) { ctx.globalAlpha = clamp(label.scale * 1.05, .38, .98); ctx.fillStyle = group.color; ctx.font = "9px monospace"; ctx.textAlign = "center"; ctx.fillText(`${group.company} · ${group.models.length}`, label.x, label.y); ctx.textAlign = "start"; }
       });
       nodesRef.current = hitNodes.sort((a, b) => a.depth - b.depth);
       if (c.distance < 570) hitNodes.sort((a, b) => Math.hypot(a.x - width / 2, a.y - height / 2) - Math.hypot(b.x - width / 2, b.y - height / 2)).slice(0, 6).forEach(drawCard);
@@ -215,7 +234,7 @@ export default function Home() {
     </header>
     <aside className="left-rail"><p className="eyebrow">{t.modelClass}</p><nav>{FILTERS.map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}><span />{t.filters[item]}</button>)}</nav><div className="rail-divider" /><p className="eyebrow">{t.galaxies}</p><div className="company-list"><button className={!focusedCompany ? "active" : ""} onClick={() => setFocusedCompany(null)}>{t.allGalaxies}<em>{companies.length}</em></button>{companies.map((company) => <button key={company} className={focusedCompany === company ? "active" : ""} onClick={() => setFocusedCompany(company)}>{company}<em>{catalog.models.filter((model) => model.company === company).length}</em></button>)}</div></aside>
     <section className="space"><canvas ref={canvasRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd} onWheel={onWheel} aria-label={lang === "zh" ? "可旋转缩放的三维模型宇宙" : "Interactive 3D model universe"} />
-      <div className="space-heading"><p>NEURAL DNA CONSTELLATION / 2026</p><h1>{focusedCompany || (query ? `“${query}”` : t.heading)}</h1><span>{visible.length} MODELS · {t.hint}</span></div>
+      <div className="space-heading"><p>ATOMIC MODEL CONSTELLATION / 2026</p><h1>{focusedCompany || (query ? `“${query}”` : t.heading)}</h1><span>{visible.length} MODELS · {t.hint}</span></div>
       <div className="view-controls"><button onClick={() => zoomBy(.82)}>＋</button><span>{zoom}%</span><button onClick={() => zoomBy(1.22)}>−</button><button onClick={resetView} title={t.reset}>◎</button></div>
       {zoom >= 210 && <div className="micro-mode">{t.micro}</div>}
       {!visible.length && <div className="empty-state"><b>{t.noResult}</b><button onClick={() => { setQuery(""); setFilter("all"); setFocusedCompany(null); }}>{t.resetMap}</button></div>}
