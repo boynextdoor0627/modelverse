@@ -70,6 +70,7 @@ export default function Home() {
   const [zoom, setZoom] = useState(100);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const nodesRef = useRef<ScreenNode[]>([]);
+  const hoveredId = useRef<string | null>(null);
   const pointers = useRef(new Map<number, { x: number; y: number }>());
   const gesture = useRef({ x: 0, y: 0, distance: 0, moved: false });
   const camera = useRef({ yaw: -.18, pitch: .12, distance: 1200, targetYaw: -.18, targetPitch: .12, targetDistance: 1200, panX: 0, panY: 0, targetPanX: 0, targetPanY: 0 });
@@ -91,6 +92,7 @@ export default function Home() {
       return (!needle || text.includes(needle)) && typeMatches(model.type, filter) && (!focusedCompany || model.company === focusedCompany);
     });
   }, [catalog, query, filter, focusedCompany]);
+  const visibleCompanies = useMemo(() => [...new Set(visible.map((model) => model.company))], [visible]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -145,23 +147,28 @@ export default function Home() {
       background.addColorStop(0, "#0a1d2c"); background.addColorStop(.45, "#050d1a"); background.addColorStop(1, "#020610"); ctx.fillStyle = background; ctx.fillRect(0, 0, width, height);
       starSeed.forEach((star) => { ctx.globalAlpha = star.a; ctx.fillStyle = "#c8fbff"; ctx.fillRect(star.x * width, star.y * height, 1, 1); });
       const seconds = time / 1000; const groups: Array<{ depth: number; company: string; color: string; center: Point3; planets: Point3[]; models: Model[] }> = [];
-      companies.forEach((company, companyIndex) => {
+      visibleCompanies.forEach((company, companyIndex) => {
         const models = visible.filter((model) => model.company === company); if (!models.length) return;
-        const longitude = companyIndex * 2.399963; const vertical = 1 - 2 * ((companyIndex + .5) / Math.max(companies.length, 1));
+        const longitude = companyIndex * 2.399963; const vertical = 1 - 2 * ((companyIndex + .5) / Math.max(visibleCompanies.length, 1));
         const radial = Math.sqrt(Math.max(0, 1 - vertical * vertical)); const shell = 475 + (companyIndex % 4) * 58; const drift = 7 + companyIndex % 8;
-        const center = { x: Math.cos(longitude) * radial * shell + Math.sin(seconds * .19 + companyIndex) * drift, y: vertical * shell * .72 + Math.cos(seconds * .16 + companyIndex) * drift, z: Math.sin(longitude) * radial * shell + Math.sin(seconds * .14 + companyIndex) * drift };
+        const center = visibleCompanies.length === 1
+          ? { x: 0, y: 0, z: 0 }
+          : { x: Math.cos(longitude) * radial * shell + Math.sin(seconds * .19 + companyIndex) * drift, y: vertical * shell * .72 + Math.cos(seconds * .16 + companyIndex) * drift, z: Math.sin(longitude) * radial * shell + Math.sin(seconds * .14 + companyIndex) * drift };
+        const closeUp = clamp((820 - c.distance) / 360, 0, 1);
+        const systemRadius = (62 + Math.sqrt(models.length) * 9) * (1 + closeUp * 1.2);
+        const systemSpeed = .055 + (Math.abs(hash(company)) % 9) * .003;
+        const systemDirection = Math.abs(hash(company)) % 2 ? 1 : -1;
         const planets = models.map((model, index) => {
           const seed = Math.abs(hash(model.name));
-          const orbitRadius = 42 + Math.sqrt(index) * 10.5 + (seed % 9);
-          const direction = seed % 2 ? 1 : -1;
-          const speed = .075 + (seed % 17) * .0035;
-          const phase = (seed % 628) / 100 + seconds * speed * direction + index * 2.399963;
-          const inclination = ((seed % 95) - 47) * Math.PI / 180;
+          const modelVertical = 1 - 2 * ((index + .5) / models.length);
+          const modelRadial = Math.sqrt(Math.max(0, 1 - modelVertical * modelVertical));
+          const phase = index * 2.399963 + seconds * systemSpeed * systemDirection;
+          const orbitRadius = systemRadius * (.78 + (seed % 23) / 100);
           const float = Math.sin(seconds * .43 + seed) * 3.5;
           return {
-            x: center.x + Math.cos(phase) * orbitRadius,
-            y: center.y + Math.sin(phase) * orbitRadius * Math.sin(inclination) + float,
-            z: center.z + Math.sin(phase) * orbitRadius * Math.cos(inclination),
+            x: center.x + Math.cos(phase) * modelRadial * orbitRadius,
+            y: center.y + modelVertical * orbitRadius * .78 + float,
+            z: center.z + Math.sin(phase) * modelRadial * orbitRadius,
           };
         });
         groups.push({ depth: rotate(center).z, company, color: COLORS[companyIndex % COLORS.length], center, planets, models });
@@ -187,7 +194,13 @@ export default function Home() {
           planetGlow.addColorStop(0, "rgba(255,255,255,.96)"); planetGlow.addColorStop(.18, group.color); planetGlow.addColorStop(.62, rgba(group.color, .7)); planetGlow.addColorStop(1, rgba(group.color, 0));
           ctx.globalAlpha = clamp(p.scale * .92, .32, 1); ctx.fillStyle = planetGlow; ctx.beginPath(); ctx.arc(p.x, p.y, planetRadius * 1.85, 0, Math.PI * 2); ctx.fill();
           ctx.globalAlpha = .9; ctx.fillStyle = group.color; ctx.beginPath(); ctx.arc(p.x, p.y, planetRadius * .58, 0, Math.PI * 2); ctx.fill();
-          hitNodes.push({ x: p.x, y: p.y, radius: Math.max(10, planetRadius + 4), depth: p.depth, model: group.models[i] });
+          if (hoveredId.current === group.models[i].id) {
+            ctx.globalAlpha = .95; ctx.strokeStyle = "rgba(229,255,255,.92)"; ctx.lineWidth = 1;
+            ctx.beginPath(); ctx.arc(p.x, p.y, Math.max(11, planetRadius * 1.75), 0, Math.PI * 2); ctx.stroke();
+            ctx.fillStyle = "rgba(226,255,255,.96)"; ctx.font = "9px monospace"; ctx.textAlign = "center";
+            ctx.fillText(group.models[i].name.slice(0, 28), p.x, p.y - Math.max(16, planetRadius * 2.2)); ctx.textAlign = "start";
+          }
+          hitNodes.push({ x: p.x, y: p.y, radius: Math.max(12, planetRadius + 5), depth: p.depth, model: group.models[i] });
         }
         const label = project({ ...group.center, y: group.center.y - 36 });
         if (label) { ctx.globalAlpha = clamp(label.scale * 1.05, .38, .98); ctx.fillStyle = group.color; ctx.font = "9px monospace"; ctx.textAlign = "center"; ctx.fillText(`${group.company} · ${group.models.length}`, label.x, label.y); ctx.textAlign = "start"; }
@@ -199,7 +212,7 @@ export default function Home() {
     };
     frame = requestAnimationFrame(render);
     return () => { cancelAnimationFrame(frame); observer.disconnect(); };
-  }, [catalog, companies, visible, lang]);
+  }, [catalog, visible, visibleCompanies, lang]);
 
   function pointerCenter() {
     const points = [...pointers.current.values()]; const x = points.reduce((sum, p) => sum + p.x, 0) / points.length; const y = points.reduce((sum, p) => sum + p.y, 0) / points.length;
@@ -207,7 +220,11 @@ export default function Home() {
   }
   function onPointerDown(event: ReactPointerEvent<HTMLCanvasElement>) { event.currentTarget.setPointerCapture(event.pointerId); pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY }); gesture.current = { ...pointerCenter(), moved: false }; }
   function onPointerMove(event: ReactPointerEvent<HTMLCanvasElement>) {
-    if (!pointers.current.has(event.pointerId)) return; pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY }); const next = pointerCenter(); const dx = next.x - gesture.current.x; const dy = next.y - gesture.current.y;
+    if (!pointers.current.has(event.pointerId)) {
+      const rect = event.currentTarget.getBoundingClientRect(); const node = pickNode(event.clientX - rect.left, event.clientY - rect.top, event.pointerType, true);
+      hoveredId.current = node?.model.id ?? null; event.currentTarget.style.cursor = node ? "pointer" : "grab"; return;
+    }
+    hoveredId.current = null; pointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY }); const next = pointerCenter(); const dx = next.x - gesture.current.x; const dy = next.y - gesture.current.y;
     if (Math.abs(dx) + Math.abs(dy) > 2) gesture.current.moved = true;
     const c = camera.current;
     if (pointers.current.size > 1) { c.targetPanX += dx; c.targetPanY += dy; if (next.distance && gesture.current.distance) c.targetDistance = clamp(c.targetDistance / (next.distance / gesture.current.distance), 410, 1800); setZoom(Math.round(120000 / c.targetDistance)); }
@@ -216,9 +233,17 @@ export default function Home() {
   }
   function onPointerEnd(event: ReactPointerEvent<HTMLCanvasElement>) {
     const wasMoved = gesture.current.moved; pointers.current.delete(event.pointerId);
-    if (!wasMoved) { const rect = event.currentTarget.getBoundingClientRect(); const x = event.clientX - rect.left, y = event.clientY - rect.top; const node = [...nodesRef.current].reverse().find((item) => Math.hypot(item.x - x, item.y - y) <= item.radius); if (node) setSelected(node.model); }
+    if (!wasMoved) { const rect = event.currentTarget.getBoundingClientRect(); const node = pickNode(event.clientX - rect.left, event.clientY - rect.top, event.pointerType); if (node) setSelected(node.model); }
     if (pointers.current.size) gesture.current = { ...pointerCenter(), moved: false };
   }
+  function pickNode(x: number, y: number, pointerType: string, hover = false) {
+    const magnet = pointerType === "touch" ? 38 : hover ? 22 : zoom >= 150 ? 32 : 25;
+    return nodesRef.current
+      .map((node) => ({ node, distance: Math.hypot(node.x - x, node.y - y) }))
+      .filter(({ node, distance }) => distance <= Math.max(node.radius, magnet))
+      .sort((a, b) => a.distance - b.distance || a.node.depth - b.node.depth)[0]?.node;
+  }
+  function onPointerLeave(event: ReactPointerEvent<HTMLCanvasElement>) { if (!pointers.current.size) { hoveredId.current = null; event.currentTarget.style.cursor = "grab"; } }
   function onWheel(event: ReactWheelEvent<HTMLCanvasElement>) { event.preventDefault(); const c = camera.current; c.targetDistance = clamp(c.targetDistance * Math.exp(event.deltaY * .00115), 410, 1800); setZoom(Math.round(120000 / c.targetDistance)); }
   function resetView() { const c = camera.current; Object.assign(c, { yaw: -.18, pitch: .12, distance: 1200, targetYaw: -.18, targetPitch: .12, targetDistance: 1200, panX: 0, panY: 0, targetPanX: 0, targetPanY: 0 }); setZoom(100); }
   function zoomBy(factor: number) { const c = camera.current; c.targetDistance = clamp(c.targetDistance * factor, 410, 1800); setZoom(Math.round(120000 / c.targetDistance)); }
@@ -233,7 +258,7 @@ export default function Home() {
       <div className="top-actions"><div className="language"><button className={lang === "zh" ? "active" : ""} onClick={() => setLang("zh")}>中文</button><button className={lang === "en" ? "active" : ""} onClick={() => setLang("en")}>EN</button></div><div className="system-state"><i />{t.online}<b>{catalog.meta.modelCount}</b></div></div>
     </header>
     <aside className="left-rail"><p className="eyebrow">{t.modelClass}</p><nav>{FILTERS.map((item) => <button key={item} className={filter === item ? "active" : ""} onClick={() => setFilter(item)}><span />{t.filters[item]}</button>)}</nav><div className="rail-divider" /><p className="eyebrow">{t.galaxies}</p><div className="company-list"><button className={!focusedCompany ? "active" : ""} onClick={() => setFocusedCompany(null)}>{t.allGalaxies}<em>{companies.length}</em></button>{companies.map((company) => <button key={company} className={focusedCompany === company ? "active" : ""} onClick={() => setFocusedCompany(company)}>{company}<em>{catalog.models.filter((model) => model.company === company).length}</em></button>)}</div></aside>
-    <section className="space"><canvas ref={canvasRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd} onWheel={onWheel} aria-label={lang === "zh" ? "可旋转缩放的三维模型宇宙" : "Interactive 3D model universe"} />
+    <section className="space"><canvas ref={canvasRef} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerEnd} onPointerCancel={onPointerEnd} onPointerLeave={onPointerLeave} onWheel={onWheel} aria-label={lang === "zh" ? "可旋转缩放的三维模型宇宙" : "Interactive 3D model universe"} />
       <div className="space-heading"><p>ATOMIC MODEL CONSTELLATION / 2026</p><h1>{focusedCompany || (query ? `“${query}”` : t.heading)}</h1><span>{visible.length} MODELS · {t.hint}</span></div>
       <div className="view-controls"><button onClick={() => zoomBy(.82)}>＋</button><span>{zoom}%</span><button onClick={() => zoomBy(1.22)}>−</button><button onClick={resetView} title={t.reset}>◎</button></div>
       {zoom >= 210 && <div className="micro-mode">{t.micro}</div>}
