@@ -1,0 +1,23 @@
+[Unit]
+Description=Modelverse production web service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=modelverse
+Group=modelverse
+WorkingDirectory=/var/www/modelverse
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=PATH=/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/local/bin/pnpm start -- --hostname 127.0.0.1 --port 3000
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+KillSignal=SIGINT
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

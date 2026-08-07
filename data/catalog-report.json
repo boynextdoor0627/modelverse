@@ -1,0 +1,130 @@
+{
+  "generatedAt": "2026-08-03",
+  "final": {
+    "modelCount": 2733,
+    "companyCount": 76,
+    "sourceCounts": {
+      "curated": 186,
+      "openrouter": 258,
+      "huggingface": 2289
+    },
+    "lifecycleCounts": {
+      "stable": 2645,
+      "preview": 85,
+      "deprecated": 3
+    }
+  },
+  "intake": {
+    "curated": {
+      "examined": 192,
+      "accepted": 186,
+      "rejected": 0,
+      "duplicates": 6
+    },
+    "openrouter": {
+      "examined": 338,
+      "accepted": 258,
+      "rejected": 31,
+      "duplicates": 49
+    },
+    "huggingface": {
+      "examined": 3188,
+      "accepted": 2289,
+      "rejected": 854,
+      "duplicates": 45
+    }
+  },
+  "excludedByLimit": 0,
+  "companyCounts": {
+    "EleutherAI": 300,
+    "Allen Institute for AI": 232,
+    "NVIDIA": 209,
+    "Alibaba": 197,
+    "Microsoft": 153,
+    "IBM": 95,
+    "Nous Research": 77,
+    "OpenAI": 74,
+    "DeepSeek": 72,
+    "Zhipu AI": 70,
+    "Google DeepMind": 68,
+    "OpenBMB": 67,
+    "TII": 60,
+    "Tokyo Tech": 58,
+    "H2O.ai": 57,
+    "ByteDance": 53,
+    "InclusionAI": 52,
+    "Shanghai AI Lab": 51,
+    "Salesforce": 50,
+    "Meta": 47,
+    "Stability AI": 40,
+    "Hugging Face": 39,
+    "Liquid AI": 37,
+    "BigScience": 36,
+    "Tencent": 35,
+    "SCB 10X": 33,
+    "BigCode": 30,
+    "Rinna": 29,
+    "Anthropic": 25,
+    "01.AI": 25,
+    "TinyLlama": 23,
+    "MiniMax": 22,
+    "Moonshot AI": 22,
+    "SpeakLeash": 22,
+    "Mistral AI": 21,
+    "Preferred Networks": 20,
+    "Amazon": 17,
+    "Apple": 17,
+    "Upstage": 15,
+    "Stanford CRFM": 15,
+    "LG AI Research": 14,
+    "SB Intuitions": 13,
+    "Baichuan": 12,
+    "Poolside": 12,
+    "Swiss AI": 11,
+    "StepFun": 10,
+    "Xiaomi": 10,
+    "xAI": 9,
+    "SK Telecom": 8,
+    "GSAI": 6,
+    "NAVER": 6,
+    "Sarvam AI": 6,
+    "Perplexity": 5,
+    "State Spaces": 5,
+    "Aion Labs": 4,
+    "Cohere": 4,
+    "Kuaishou": 3,
+    "InternScience": 3,
+    "Snowflake": 3,
+    "xiaomi": 2,
+    "Thinking Machines": 2,
+    "Nexa AI": 2,
+    "Arcee AI": 2,
+    "Reka AI": 2,
+    "Relace": 2,
+    "Morph": 2,
+    "bilibili": 1,
+    "Meituan": 1,
+    "SenseTime": 1,
+    "ModelBest": 1,
+    "Sakana AI": 1,
+    "Inception": 1,
+    "Writer": 1,
+    "Deep Cogito": 1,
+    "AI21 Labs": 1,
+    "Baidu": 1
+  },
+  "rules": {
+    "maximumModels": 3000,
+    "precedence": [
+      "curated",
+      "openrouter",
+      "huggingface"
+    ],
+    "huggingFacePolicy": "All discoverable text-generation models from verified organizations listed in data/source-registry.json",
+    "exclusions": "Aliases, routers, quantized derivatives, adapters, merges, and incomplete records"
+  },
+  "sources": [
+    "https://openrouter.ai/api/v1/models",
+    "https://huggingface.co/api/models?author={verified-organization}&pipeline_tag=text-generation&limit=300&full=true"
+  ]
+}
