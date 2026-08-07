@@ -8,12 +8,12 @@ const outputPath = resolve(root, "public/models.json");
 const reportPath = resolve(root, "data/catalog-report.json");
 const sourceDir = process.env.CATALOG_SOURCE_DIR;
 const today = new Date().toISOString().slice(0, 10);
-const MAX_MODELS = 720;
+const MAX_MODELS = 3000;
 
 const [curated, registry] = await Promise.all([readJson(curatedPath), readJson(registryPath)]);
 const [openrouterRaw, huggingfaceRaw] = await Promise.all([
   sourceDir ? readJson(resolve(sourceDir, "openrouter.json")) : fetchJson("https://openrouter.ai/api/v1/models"),
-  sourceDir ? readJson(resolve(sourceDir, "huggingface.json")) : fetchJson("https://huggingface.co/api/models?pipeline_tag=text-generation&sort=downloads&direction=-1&limit=1000&full=true"),
+  sourceDir ? readJson(resolve(sourceDir, "huggingface.json")) : fetchOfficialHuggingFaceModels(Object.keys(registry.huggingface)),
 ]);
 
 const stats = {
@@ -88,12 +88,12 @@ const report = {
   rules: {
     maximumModels: MAX_MODELS,
     precedence: ["curated", "openrouter", "huggingface"],
-    huggingFacePolicy: "Only organizations listed in data/source-registry.json",
+    huggingFacePolicy: "All discoverable text-generation models from verified organizations listed in data/source-registry.json",
     exclusions: "Aliases, routers, quantized derivatives, adapters, merges, and incomplete records",
   },
   sources: [
     "https://openrouter.ai/api/v1/models",
-    "https://huggingface.co/api/models?pipeline_tag=text-generation&sort=downloads&direction=-1&limit=1000&full=true",
+    "https://huggingface.co/api/models?author={verified-organization}&pipeline_tag=text-generation&limit=300&full=true",
   ],
 };
 
@@ -280,4 +280,19 @@ async function fetchJson(url) {
   const response = await fetch(url, { headers: { "User-Agent": "modelverse-catalog/1.0" } });
   if (!response.ok) throw new Error(`Catalog fetch failed: ${response.status} ${url}`);
   return response.json();
+}
+
+async function fetchOfficialHuggingFaceModels(authors) {
+  const results = [];
+  const queue = [...authors];
+  const workers = Array.from({ length: 6 }, async () => {
+    while (queue.length) {
+      const author = queue.shift();
+      const url = `https://huggingface.co/api/models?author=${encodeURIComponent(author)}&pipeline_tag=text-generation&sort=downloads&direction=-1&limit=300&full=true`;
+      const models = await fetchJson(url);
+      results.push(...models);
+    }
+  });
+  await Promise.all(workers);
+  return results;
 }

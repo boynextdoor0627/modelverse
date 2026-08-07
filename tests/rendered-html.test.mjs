@@ -41,7 +41,7 @@ test("ships an interactive bilingual catalog with auditable sources", async () =
   assert.match(page, /onPointerMove/);
   assert.match(page, /onWheel/);
   assert.match(css, /touch-action:\s*none/);
-  assert.ok(catalog.meta.modelCount >= 500);
+  assert.ok(catalog.meta.modelCount >= 700);
   assert.ok(catalog.meta.companyCount >= 60);
   assert.equal(catalog.meta.modelCount, catalog.models.length);
   assert.equal(catalog.meta.companyCount, new Set(catalog.models.map((model) => model.company)).size);
