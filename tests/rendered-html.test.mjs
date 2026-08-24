@@ -25,15 +25,17 @@ test("server-renders the MODELVERSE loading shell", async () => {
 });
 
 test("ships an interactive bilingual catalog with auditable sources", async () => {
-  const [page, css, catalogText, reportText, workflow] = await Promise.all([
+  const [page, css, catalogText, reportText, workflow, officialRegistryText] = await Promise.all([
     readFile(new URL("../app/page.tsx", import.meta.url), "utf8"),
     readFile(new URL("../app/globals.css", import.meta.url), "utf8"),
     readFile(new URL("../public/models.json", import.meta.url), "utf8"),
     readFile(new URL("../data/catalog-report.json", import.meta.url), "utf8"),
     readFile(new URL("../.github/workflows/update-model-catalog.yml", import.meta.url), "utf8"),
+    readFile(new URL("../data/official-model-registry.json", import.meta.url), "utf8"),
   ]);
   const catalog = JSON.parse(catalogText);
   const report = JSON.parse(reportText);
+  const officialRegistry = JSON.parse(officialRegistryText);
 
   assert.match(page, /fetch\("\/models\.json"\)/);
   assert.match(page, /type Lang = "zh" \| "en"/);
@@ -49,4 +51,8 @@ test("ships an interactive bilingual catalog with auditable sources", async () =
   assert.equal(report.final.modelCount, catalog.meta.modelCount);
   assert.match(workflow, /schedule:/);
   assert.match(workflow, /node scripts\/update-model-catalog\.mjs/);
+  assert.match(page, /official-model-registry\.json/);
+  assert.match(page, /model\.sourceKind !== "curated"/);
+  assert.ok(officialRegistry.models.length >= 20);
+  assert.ok(officialRegistry.models.every((model) => /^https:\/\//.test(model.source)));
 });

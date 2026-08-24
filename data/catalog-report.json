@@ -1,24 +1,24 @@
 {
-  "generatedAt": "2026-08-03",
+  "generatedAt": "2026-08-24",
   "final": {
-    "modelCount": 2733,
+    "modelCount": 2735,
     "companyCount": 76,
     "sourceCounts": {
-      "curated": 186,
+      "curated": 188,
       "openrouter": 258,
       "huggingface": 2289
     },
     "lifecycleCounts": {
-      "stable": 2645,
+      "stable": 2647,
       "preview": 85,
       "deprecated": 3
     }
   },
   "intake": {
     "curated": {
-      "examined": 192,
-      "accepted": 186,
-      "rejected": 0,
+      "examined": 195,
+      "accepted": 188,
+      "rejected": 1,
       "duplicates": 6
     },
     "openrouter": {

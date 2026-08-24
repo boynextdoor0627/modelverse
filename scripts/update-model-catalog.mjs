@@ -4,13 +4,15 @@ import { resolve } from "node:path";
 const root = resolve(import.meta.dirname, "..");
 const curatedPath = resolve(root, "data/curated-models.json");
 const registryPath = resolve(root, "data/source-registry.json");
+const officialRegistryPath = resolve(root, "data/official-model-registry.json");
 const outputPath = resolve(root, "public/models.json");
 const reportPath = resolve(root, "data/catalog-report.json");
 const sourceDir = process.env.CATALOG_SOURCE_DIR;
 const today = new Date().toISOString().slice(0, 10);
 const MAX_MODELS = 3000;
 
-const [curated, registry] = await Promise.all([readJson(curatedPath), readJson(registryPath)]);
+const [curated, registry, officialRegistry] = await Promise.all([readJson(curatedPath), readJson(registryPath), readJson(officialRegistryPath)]);
+const officialEvidence = new Map(officialRegistry.models.map((model) => [evidenceKey(model), model]));
 const [openrouterRaw, huggingfaceRaw] = await Promise.all([
   sourceDir ? readJson(resolve(sourceDir, "openrouter.json")) : fetchJson("https://openrouter.ai/api/v1/models"),
   sourceDir ? readJson(resolve(sourceDir, "huggingface.json")) : fetchOfficialHuggingFaceModels(Object.keys(registry.huggingface)),
@@ -24,12 +26,21 @@ const stats = {
 const accepted = [];
 const seen = new Set();
 
-for (const model of curated.models) addModel({
-  ...model,
-  sourceKind: "curated",
-  lifecycle: inferLifecycle(model.name),
-  discoveredAt: curated.meta?.generatedAt ?? today,
-}, "curated");
+for (const model of curated.models) {
+  const evidence = officialEvidence.get(evidenceKey(model));
+  if (!evidence || model.variantOf || shouldExclude(model.name)) {
+    stats.curated.rejected += 1;
+    continue;
+  }
+  addModel({
+    ...model,
+    source: evidence.source,
+    sourceKind: "curated",
+    lifecycle: evidence.lifecycle ?? model.lifecycle ?? inferLifecycle(model.name),
+    verificationStatus: evidence.lifecycle === "preview" ? "preview" : "official",
+    discoveredAt: officialRegistry.updatedAt ?? today,
+  }, "curated");
+}
 
 for (const item of openrouterRaw.data ?? []) {
   const model = fromOpenRouter(item);
@@ -148,6 +159,7 @@ function fromOpenRouter(item) {
     scenarios: inferScenarios(name, modalities),
     source: `https://openrouter.ai/${item.id}`,
     sourceKind: "openrouter",
+    verificationStatus: "third-party",
     lifecycle: item.expiration_date ? "deprecated" : inferLifecycle(name),
     discoveredAt: today,
   };
@@ -180,6 +192,7 @@ function fromHuggingFace(item) {
     scenarios: inferScenarios(name, tags),
     source: `https://huggingface.co/${item.modelId}`,
     sourceKind: "huggingface",
+    verificationStatus: "official",
     lifecycle: inferLifecycle(name),
     discoveredAt: today,
     downloads: item.downloads ?? 0,
@@ -189,6 +202,10 @@ function fromHuggingFace(item) {
 function canonicalKey(model) {
   const name = String(model.name).toLowerCase().replace(/:(free|extended)$/g, "").replace(/[-_.\s]+latest$/g, "").replace(/[^a-z0-9\u4e00-\u9fff]+/g, "");
   return `${String(model.company).toLowerCase()}::${name}`;
+}
+
+function evidenceKey(model) {
+  return `${String(model.company).trim().toLowerCase()}::${String(model.name).trim().toLowerCase()}`;
 }
 
 function shouldExclude(name) {
