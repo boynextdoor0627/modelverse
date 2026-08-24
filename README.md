@@ -27,8 +27,23 @@ MODELVERSE 是一个面向开发者与企业的 AI 模型生态可视化导航�
 - 用自然语言搜索“便宜的代码模型”“适合中文客服”或“可以本地部署”
 - 查看模型简介、优势、限制、上下文、价格、协议与部署方式
 - 对比多个候选模型，辅助技术选型和采购决策
+- 使用首页“部署计算器”，快速估算主流模型的显存与 GPU 容量需求
 - 探索 Agent 产品与模型之间的生态关系
 - 在中英文界面及桌面、移动设备间获得一致体验
+
+### 本地部署选型计算器
+
+首页内置了轻量的本地部署选型计算器，目前精选 16 款主流、具有公开参数且适合进行本地部署容量估算的模型，覆盖 DeepSeek、Qwen、Kimi、GLM、MiniMax、GPT‑OSS、Llama、Mistral、Nemotron 与 Seed‑OSS 等模型家族。
+
+你可以调整：
+
+- 权重精度：BF16、FP8／INT8 或 INT4
+- 实际上下文长度与峰值并发
+- KV Cache 精度
+- 生产环境预留余量
+- 单卡可用显存容量
+
+计算器会分别展示模型权重、KV Cache、运行时开销、生产建议显存，以及最低可运行和生产建议的 GPU 卡数。结果用于架构前期讨论，不替代推理框架实测、硬件兼容性验证与正式 POC。
 
 ### 宇宙规则
 
@@ -51,8 +66,17 @@ It is not only an encyclopedia of what exists. It is designed to answer a more u
 - Company-centered planetary systems and lifecycle-aware model hierarchy
 - Structured model profiles focused on suitability before raw specifications
 - Multi-model comparison workspace for technical and business decisions
+- Homepage deployment calculator for rapid VRAM and GPU capacity estimates
 - Dedicated Agent ecosystem navigation
 - Responsive desktop and mobile interfaces with ambient nebula visuals and sound
+
+### Local deployment calculator
+
+The homepage includes a focused deployment sizing calculator with 16 mainstream models whose public parameter counts support meaningful local-inference estimates. The shortlist spans DeepSeek, Qwen, Kimi, GLM, MiniMax, GPT‑OSS, Llama, Mistral, Nemotron, and Seed‑OSS families.
+
+Adjust weight precision, working context, peak concurrency, KV-cache precision, production headroom, and per-GPU usable memory. The calculator breaks the estimate into model weights, KV cache, runtime overhead, recommended VRAM, minimum viable GPU count, and a production-oriented GPU plan.
+
+Results are early architecture estimates—not a substitute for inference-framework benchmarks, hardware compatibility validation, or a production POC.
 
 ## Run locally
 
