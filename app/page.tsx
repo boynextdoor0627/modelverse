@@ -108,12 +108,28 @@ const PRECISIONS: Record<PrecisionKey, { bytes: number; zh: string; en: string; 
   int4:{ bytes:.5, zh:"INT4 · 容量优先", en:"INT4 · Capacity first", noteZh:"显存最低，复杂任务应先做质量评测", noteEn:"Lowest memory use; evaluate quality on complex tasks" },
 };
 const GPU_PROFILES = [
-  { id:"24", memory:22, zh:"24 GB 级 · 可用约 22 GB", en:"24 GB class · ~22 GB usable" },
-  { id:"48", memory:44, zh:"48 GB 级 · 可用约 44 GB", en:"48 GB class · ~44 GB usable" },
-  { id:"80", memory:74, zh:"80 GB 级 · 可用约 74 GB", en:"80 GB class · ~74 GB usable" },
-  { id:"96", memory:88, zh:"96 GB 级 · 可用约 88 GB", en:"96 GB class · ~88 GB usable" },
-  { id:"141", memory:130, zh:"141 GB 级 · 可用约 130 GB", en:"141 GB class · ~130 GB usable" },
+  { id:"24", memory:22, price:16000, zh:"24 GB 级 · 可用约 22 GB", en:"24 GB class · ~22 GB usable" },
+  { id:"48", memory:44, price:40000, zh:"L20 48 GB · 可用约 44 GB", en:"L20 48 GB · ~44 GB usable" },
+  { id:"84", memory:77, price:70000, zh:"RTX PRO 6000D 84 GB · 可用约 77 GB", en:"RTX PRO 6000D 84 GB · ~77 GB usable" },
+  { id:"96", memory:88, price:130000, zh:"H20 96 GB · 可用约 88 GB", en:"H20 96 GB · ~88 GB usable" },
+  { id:"141", memory:130, price:400000, zh:"H200 141 GB · 性能参照", en:"H200 141 GB · performance reference" },
 ];
+const FRAMEWORKS = [
+  { id:"paged", factor:1.1, zh:"vLLM + PagedAttention · 10%", en:"vLLM + PagedAttention · 10%" },
+  { id:"vllm", factor:1.15, zh:"vLLM 标准 · 15%", en:"Standard vLLM · 15%" },
+  { id:"tgi", factor:1.2, zh:"TGI · 20%", en:"TGI · 20%" },
+  { id:"hf", factor:1.25, zh:"HF Transformers · 25%", en:"HF Transformers · 25%" },
+];
+const CLOUD_APIS = [
+  { id:"balanced", zh:"主流国产旗舰 API", en:"Mainstream flagship API", input:8.4, output:25 },
+  { id:"value", zh:"高性价比 API", en:"Value API", input:3, output:9 },
+  { id:"premium", zh:"高性能旗舰 API", en:"Premium flagship API", input:20, output:100 },
+];
+const KV_OVERRIDES: Record<string, number> = {
+  "m-8":72, "m-7":65, "m-9":188, "m-12":188, "m-11":96, "m-730":96,
+  "m-124":72, "m-126":128, "m-112":96, "m-345":73, "m-346":64,
+  "m-411":320, "m-427":128, "m-292":96, "m-364":64, "m-721":96,
+};
 // A deliberately short deployment shortlist. It favors widely used, currently
 // offered open/open-weight families and keeps a useful spread of model sizes.
 const DEPLOYMENT_FEATURED_IDS = [
@@ -121,11 +137,13 @@ const DEPLOYMENT_FEATURED_IDS = [
   "m-112", "m-345", "m-346", "m-411", "m-427", "m-292", "m-364", "m-721",
 ];
 function kvCoefficient(model: Model) {
+  if (KV_OVERRIDES[model.id]) return KV_OVERRIDES[model.id];
   const text = `${model.name} ${model.type} ${model.notes}`;
   if (/MLA|DeepSeek/i.test(text)) return 72;
   if (/MoE|混合专家/i.test(text) || (parseMetric(model.activeParams) > 0 && parseMetric(model.activeParams) < parseMetric(model.params) * .5)) return 128;
   return parseMetric(model.params) <= 15 ? 96 : 256;
 }
+function practicalGpuCount(raw: number) { const count = Math.max(1, Math.ceil(raw)); return count === 1 ? 1 : count <= 2 ? 2 : count <= 4 ? 4 : count <= 8 ? 8 : Math.ceil(count / 8) * 8; }
 function popularityScore(model: Model) {
   if (model.downloads && model.downloads > 0) return clamp((Math.log10(model.downloads + 1) - 2) / 5.5, .08, 1);
   const tier = modelTier(model, 99); return tier === "flagship" ? .88 : tier === "stable" ? .56 : tier === "specialized" ? .5 : tier === "lightweight" ? .4 : tier === "historical" ? .24 : .1;
@@ -315,27 +333,48 @@ function CompanyOverview({ company, models, lang, updatedAt, open, onToggle }: {
 function DeploymentLab({ model, models, lang, updatedAt, onModelChange, onClose }: { model: Model; models: Model[]; lang: Lang; updatedAt: string; onModelChange: (model: Model) => void; onClose: () => void }) {
   const [precision, setPrecision] = useState<PrecisionKey>("fp8");
   const [contextK, setContextK] = useState(Math.max(1, Math.min(1024, Math.round(contextKOf(model.context)))));
-  const [concurrency, setConcurrency] = useState(8);
+  const [concurrency, setConcurrency] = useState(20);
   const [kvPrecision, setKvPrecision] = useState<"bf16" | "int8">("int8");
-  const [headroom, setHeadroom] = useState(20);
-  const [gpuId, setGpuId] = useState("80");
+  const [frameworkId, setFrameworkId] = useState("paged");
+  const [gpuId, setGpuId] = useState("96");
+  const [economicsOpen, setEconomicsOpen] = useState(false);
+  const [dailyRequests, setDailyRequests] = useState(30000);
+  const [tokensPerRequest, setTokensPerRequest] = useState(10000);
+  const [apiId, setApiId] = useState("balanced");
+  const [amortMonths, setAmortMonths] = useState(36);
   const paramsB = parseMetric(model.params);
-  const gpu = GPU_PROFILES.find((item) => item.id === gpuId) || GPU_PROFILES[2];
+  const gpu = GPU_PROFILES.find((item) => item.id === gpuId) || GPU_PROFILES[3];
+  const framework = FRAMEWORKS.find((item) => item.id === frameworkId) || FRAMEWORKS[0];
+  const cloudApi = CLOUD_APIS.find((item) => item.id === apiId) || CLOUD_APIS[0];
   const kvKB = kvCoefficient(model) * (kvPrecision === "int8" ? .5 : 1);
   const weights = paramsB * PRECISIONS[precision].bytes;
   const kv = kvKB * contextK * 1000 * concurrency / 1_000_000;
-  const runtime = weights * .1;
-  const baseline = weights + kv + runtime;
-  const recommended = baseline * (1 + headroom / 100);
-  const minimumCards = Math.max(1, Math.ceil(baseline / gpu.memory));
-  const recommendedCards = Math.max(minimumCards, Math.ceil(recommended / gpu.memory));
+  const recommended = (weights + kv) * framework.factor;
+  const rawCards = recommended / gpu.memory;
+  const minimumCards = Math.max(1, Math.ceil(rawCards));
+  const recommendedCards = practicalGpuCount(rawCards);
+  const perConcurrentKv = Math.max(.001, kvKB * contextK * 1000 / 1_000_000);
+  const maxConcurrency = Math.max(concurrency, Math.floor((recommendedCards * gpu.memory / framework.factor - weights) / perConcurrentKv));
+  const maxDailyRequests = Math.max(1000, Math.round(maxConcurrency / .0011 / 1000) * 1000);
   const isMoe = parseMetric(model.activeParams) > 0 && parseMetric(model.activeParams) < paramsB * .5 || /MoE|混合专家/i.test(`${model.type} ${model.notes}`);
   const deployable = /开源|开放权重|open source|open weight/i.test(model.openSource);
   const format = (value: number) => value < 10 ? value.toFixed(1) : Math.round(value).toLocaleString(lang === "zh" ? "zh-CN" : "en-US");
+  const money = (value: number) => `¥${Math.round(Math.abs(value)).toLocaleString("zh-CN")}`;
+  const infraCost = recommendedCards <= 3 ? 120000 : recommendedCards <= 8 ? 500000 : recommendedCards <= 16 ? 1000000 : Math.ceil(recommendedCards / 8) * 500000;
+  const hardwareCost = recommendedCards * gpu.price + infraCost;
+  const monthlyOpex = recommendedCards * 500 + (recommendedCards <= 8 ? 3000 : 8000) + hardwareCost * .03 / 12;
+  const monthlyLocal = hardwareCost / amortMonths + monthlyOpex;
+  const blendedApiPrice = cloudApi.input * .8 + cloudApi.output * .2;
+  const monthlyCloud = dailyRequests * tokensPerRequest * 30 * blendedApiPrice / 1_000_000;
+  const monthlySaving = monthlyCloud - monthlyLocal;
+  const payback = monthlySaving > 0 ? hardwareCost / monthlySaving : null;
+  const breakevenDaily = Math.ceil(monthlyLocal / blendedApiPrice * 1_000_000 / 30 / tokensPerRequest / 100) * 100;
+  const serverPlan = recommendedCards <= 3 ? `${lang === "zh" ? "单机验证节点" : "Single validation node"} · TP=${recommendedCards}` : recommendedCards <= 8 ? `${lang === "zh" ? "单机高密度推理节点" : "Single dense inference node"} · TP=${recommendedCards}` : `${Math.ceil(recommendedCards / 8)}× ${lang === "zh" ? "八卡推理节点" : "8-GPU inference nodes"} · ${isMoe ? "TP=8 + EP" : "TP=8 + PP"}`;
+  const networkPlan = recommendedCards <= 8 ? (lang === "zh" ? "机内互联，无需独立参数面网络" : "In-node interconnect; no separate fabric") : (lang === "zh" ? "建议 400G RoCE 参数面网络" : "400G RoCE model-parallel fabric recommended");
   const labels = lang === "zh" ? {
-    kicker:"DEPLOYMENT LAB · 第一期", title:"本地部署计算器", intro:"从首页选择模型，把规格翻译成可讨论的显存与 GPU 容量方案。", choose:"选择模型", precision:"权重精度", context:"实际上下文", concurrency:"峰值并发", kv:"KV Cache 精度", headroom:"生产余量", gpu:"GPU 容量参照", weights:"模型权重", cache:"KV Cache", runtime:"运行时开销", total:"生产建议显存", minimum:"最低可运行", suggested:"生产建议", cards:"张", result:"容量结论", assumptions:"计算假设", back:"返回模型宇宙", warning:"当前目录未确认该模型可下载权重；以下仅做容量演算，不代表可以本地部署。", moe:"这是 MoE 模型：显存按总参数估算，速度更接近激活参数规模。", dense:"Dense 模型跨卡越多，通信开销通常越明显。", kvTip:"当前 KV Cache 已超过模型权重，建议缩短上下文、降低并发或使用低精度 KV。", estimate:"结果是架构前期估算，不代替推理框架实测、硬件兼容性验证和 POC。", formula:"权重 + KV Cache + 约 10% 运行时开销，再加入生产余量。", updated:"模型数据更新", source:"模型参数来源"
+    kicker:"DEPLOYMENT LAB · ENGINEERING", title:"AI 部署选型计算器", intro:"把模型、业务负载与硬件容量放在同一个决策界面。", choose:"选择模型", precision:"权重精度", context:"实际上下文", concurrency:"峰值并发", kv:"KV Cache 精度", framework:"推理框架与开销", gpu:"GPU 容量参照", weights:"模型权重", cache:"KV Cache", runtime:"框架开销", total:"总显存需求", minimum:"数学最低", suggested:"工程建议", cards:"张", result:"容量结论", assumptions:"计算假设", back:"返回模型宇宙", warning:"当前目录未确认该模型可下载权重；以下仅做容量演算，不代表可以本地部署。", moe:"MoE 模型：显存按总参数估算，速度更接近激活参数规模。", dense:"Dense 模型跨卡越多，通信开销通常越明显。", kvTip:"KV Cache 已超过模型权重，建议缩短上下文、降低并发或使用 INT8 KV。", estimate:"结果是架构前期估算，不代替推理框架实测、硬件兼容性验证和 POC。", formula:"总需求 =（权重 + KV Cache）× 推理框架开销系数。", updated:"模型数据更新", source:"模型参数来源"
   } : {
-    kicker:"DEPLOYMENT LAB · PHASE 1", title:"Local deployment calculator", intro:"Choose a model from the home screen and translate its specifications into a memory and GPU capacity plan.", choose:"Choose model", precision:"Weight precision", context:"Working context", concurrency:"Peak concurrency", kv:"KV cache precision", headroom:"Production headroom", gpu:"GPU capacity reference", weights:"Model weights", cache:"KV cache", runtime:"Runtime overhead", total:"Recommended VRAM", minimum:"Minimum viable", suggested:"Production plan", cards:"cards", result:"Capacity result", assumptions:"Assumptions", back:"Back to model universe", warning:"Downloadable weights are not confirmed in the catalog. This is capacity modeling only, not proof of deployability.", moe:"This is a MoE model: memory follows total parameters, while speed is closer to active parameters.", dense:"Dense models generally incur more communication overhead as card count grows.", kvTip:"KV cache exceeds model weights. Consider shorter context, lower concurrency, or lower-precision KV.", estimate:"This is an early architecture estimate, not a substitute for framework benchmarks, hardware validation, or a POC.", formula:"Weights + KV cache + ~10% runtime overhead, followed by production headroom.", updated:"Model data updated", source:"Model parameter source"
+    kicker:"DEPLOYMENT LAB · ENGINEERING", title:"AI deployment sizing calculator", intro:"Bring model, workload, hardware capacity, and economics into one decision surface.", choose:"Choose model", precision:"Weight precision", context:"Working context", concurrency:"Peak concurrency", kv:"KV cache precision", framework:"Inference framework overhead", gpu:"GPU capacity reference", weights:"Model weights", cache:"KV cache", runtime:"Framework overhead", total:"Total VRAM required", minimum:"Mathematical minimum", suggested:"Engineering plan", cards:"cards", result:"Capacity result", assumptions:"Assumptions", back:"Back to model universe", warning:"Downloadable weights are not confirmed in the catalog. This is capacity modeling only, not proof of deployability.", moe:"MoE model: memory follows total parameters while speed is closer to active parameters.", dense:"Dense models generally incur more communication overhead as card count grows.", kvTip:"KV cache exceeds model weights. Consider shorter context, lower concurrency, or INT8 KV.", estimate:"This is an early architecture estimate, not a substitute for framework benchmarks, hardware validation, or a POC.", formula:"Total = (weights + KV cache) × inference framework overhead.", updated:"Model data updated", source:"Model parameter source"
   };
   const choices = [model, ...models].filter((item, index, list) => parseMetric(item.params) > 0 && list.findIndex((candidate) => candidate.id === item.id) === index);
   return <section className="deployment-lab" aria-label={`${model.name} ${labels.title}`}>
@@ -345,14 +384,15 @@ function DeploymentLab({ model, models, lang, updatedAt, onModelChange, onClose 
     <div className="deployment-layout"><form className="deployment-controls" onSubmit={(event) => event.preventDefault()}>
       <label><span>{labels.precision}</span><select value={precision} onChange={(event) => setPrecision(event.target.value as PrecisionKey)}>{Object.entries(PRECISIONS).map(([key,value]) => <option key={key} value={key}>{lang === "zh" ? value.zh : value.en}</option>)}</select><small>{lang === "zh" ? PRECISIONS[precision].noteZh : PRECISIONS[precision].noteEn}</small></label>
       <div className="deployment-pair"><label><span>{labels.context} · K tokens</span><input type="number" min="1" max="1024" value={contextK} onChange={(event) => setContextK(Math.max(1, Number(event.target.value) || 1))} /></label><label><span>{labels.concurrency}</span><input type="number" min="1" max="500" value={concurrency} onChange={(event) => setConcurrency(Math.max(1, Number(event.target.value) || 1))} /></label></div>
-      <div className="deployment-pair"><label><span>{labels.kv}</span><select value={kvPrecision} onChange={(event) => setKvPrecision(event.target.value as "bf16" | "int8")}><option value="bf16">BF16</option><option value="int8">INT8</option></select></label><label><span>{labels.headroom} · {headroom}%</span><input className="deployment-range" type="range" min="10" max="50" step="5" value={headroom} onChange={(event) => setHeadroom(Number(event.target.value))} /></label></div>
+      <div className="deployment-pair"><label><span>{labels.kv}</span><select value={kvPrecision} onChange={(event) => setKvPrecision(event.target.value as "bf16" | "int8")}><option value="bf16">BF16</option><option value="int8">INT8 · {lang === "zh" ? "节省一半" : "half memory"}</option></select></label><label><span>{labels.framework}</span><select value={frameworkId} onChange={(event) => setFrameworkId(event.target.value)}>{FRAMEWORKS.map((item) => <option key={item.id} value={item.id}>{lang === "zh" ? item.zh : item.en}</option>)}</select></label></div>
       <label><span>{labels.gpu}</span><select value={gpuId} onChange={(event) => setGpuId(event.target.value)}>{GPU_PROFILES.map((item) => <option key={item.id} value={item.id}>{lang === "zh" ? item.zh : item.en}</option>)}</select><small>{lang === "zh" ? "只按可用显存估算，不绑定品牌、价格或合规结论" : "Capacity-only reference; no brand, price, or compliance claim"}</small></label>
     </form><div className="deployment-results">
       <div className="memory-orbit" style={{ "--fill":`${Math.min(100, recommended / (recommendedCards * gpu.memory) * 100)}%` } as CSSProperties}><div><small>{labels.total}</small><b>{format(recommended)}</b><span>GB</span></div></div>
-      <div className="deployment-stats"><article><span>{labels.weights}</span><b>{format(weights)} GB</b></article><article><span>{labels.cache}</span><b>{format(kv)} GB</b></article><article><span>{labels.runtime}</span><b>{format(runtime)} GB</b></article></div>
+      <div className="deployment-stats"><article><span>{labels.weights}</span><b>{format(weights)} GB</b></article><article><span>{labels.cache}</span><b>{format(kv)} GB</b></article><article><span>{labels.runtime}</span><b>{Math.round((framework.factor - 1) * 100)}%</b></article></div>
       <section className="deployment-recommendation"><small>{labels.result}</small><div><span>{labels.minimum}</span><b>{minimumCards} {labels.cards}</b><i>× {gpu.id} GB class</i></div><div className="recommended"><span>{labels.suggested}</span><b>{recommendedCards} {labels.cards}</b><i>{format(recommendedCards * gpu.memory)} GB usable</i></div></section>
-      <div className="deployment-tips"><p>{isMoe ? labels.moe : labels.dense}</p>{kv > weights && <p>{labels.kvTip}</p>}</div>
+      <div className="deployment-tips"><p>{isMoe ? labels.moe : labels.dense}</p><p>{serverPlan} · {networkPlan}</p><p>{lang === "zh" ? `当前配置理论可扩展至约 ${maxConcurrency.toLocaleString()} 并发 / 日均 ${maxDailyRequests.toLocaleString()} 请求` : `Estimated ceiling: ${maxConcurrency.toLocaleString()} concurrent / ${maxDailyRequests.toLocaleString()} daily requests`}</p>{kv > weights && <p>{labels.kvTip}</p>}</div>
     </div></div>
+    <section className={`deployment-economics ${economicsOpen ? "open" : ""}`}><button type="button" onClick={() => setEconomicsOpen((current) => !current)}><span><small>LOCAL VS API</small><b>{lang === "zh" ? "私有化部署与云 API 成本分析" : "Private deployment vs cloud API"}</b></span><i>{economicsOpen ? "−" : "+"}</i></button>{economicsOpen && <div className="economics-body"><div className="economics-fields"><label><span>{lang === "zh" ? "日均请求量" : "Daily requests"}</span><input type="number" min="1" value={dailyRequests} onChange={(event) => setDailyRequests(Math.max(1, Number(event.target.value) || 1))} /></label><label><span>{lang === "zh" ? "平均 Token / 请求" : "Average tokens / request"}</span><input type="number" min="100" step="100" value={tokensPerRequest} onChange={(event) => setTokensPerRequest(Math.max(100, Number(event.target.value) || 100))} /></label><label><span>{lang === "zh" ? "云 API 参照" : "Cloud API reference"}</span><select value={apiId} onChange={(event) => setApiId(event.target.value)}>{CLOUD_APIS.map((item) => <option key={item.id} value={item.id}>{lang === "zh" ? item.zh : item.en}</option>)}</select></label><label><span>{lang === "zh" ? "硬件摊销周期" : "Hardware amortization"}</span><select value={amortMonths} onChange={(event) => setAmortMonths(Number(event.target.value))}><option value={24}>24 {lang === "zh" ? "个月" : "months"}</option><option value={36}>36 {lang === "zh" ? "个月" : "months"}</option><option value={48}>48 {lang === "zh" ? "个月" : "months"}</option><option value={60}>60 {lang === "zh" ? "个月" : "months"}</option></select></label></div><div className="economics-stats"><article><span>{lang === "zh" ? "硬件与基础设施" : "Hardware & infrastructure"}</span><b>{money(hardwareCost)}</b></article><article><span>{lang === "zh" ? "月云端成本" : "Monthly cloud"}</span><b>{money(monthlyCloud)}</b></article><article><span>{lang === "zh" ? "月本地成本" : "Monthly local"}</span><b>{money(monthlyLocal)}</b></article><article className={monthlySaving >= 0 ? "positive" : "negative"}><span>{lang === "zh" ? "月度差额" : "Monthly difference"}</span><b>{monthlySaving >= 0 ? "+" : "−"}{money(monthlySaving)}</b></article></div><p className="economics-verdict">{monthlySaving > 0 ? (lang === "zh" ? `预计约 ${payback && payback < 12 ? `${format(payback)} 个月` : `${format((payback || 0) / 12)} 年`}回本；低于日均 ${breakevenDaily.toLocaleString()} 请求时，云 API 更经济。` : `Estimated payback: ${format(payback || 0)} months. Cloud API is cheaper below roughly ${breakevenDaily.toLocaleString()} daily requests.`) : (lang === "zh" ? `当前用量下云 API 更经济；日均请求约达到 ${breakevenDaily.toLocaleString()} 后，本地部署成本开始接近云端。` : `Cloud API is more economical at this volume. Local deployment approaches parity near ${breakevenDaily.toLocaleString()} daily requests.`)}</p><small className="economics-note">{lang === "zh" ? "价格为可编辑前期估算参照，未包含税费、机房、人员与融资成本；正式采购前请核验实时价格、供货及合规状态。" : "Early estimate only. Taxes, facilities, staffing, financing, live availability, and compliance are not included."}</small></div>}</section>
     <footer className="deployment-foot"><div><small>{labels.assumptions}</small><p>{labels.formula} KV ≈ {kvKB} KB/token × {contextK}K × {concurrency}.</p><p>{labels.estimate}</p></div><dl><div><dt>{labels.updated}</dt><dd>{model.discoveredAt || updatedAt}</dd></div><div><dt>{labels.source}</dt><dd>{model.source.startsWith("http") ? <a href={model.source} target="_blank" rel="noreferrer">{model.company} ↗</a> : "Catalog estimate"}</dd></div></dl><button onClick={onClose}>← {labels.back}</button></footer>
   </section>;
 }

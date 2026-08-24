@@ -40,10 +40,10 @@ MODELVERSE 是一个面向开发者与企业的 AI 模型生态可视化导航�
 - 权重精度：BF16、FP8／INT8 或 INT4
 - 实际上下文长度与峰值并发
 - KV Cache 精度
-- 生产环境预留余量
-- 单卡可用显存容量
+- vLLM、TGI 等推理框架开销
+- GPU 型号与单卡可用显存容量
 
-计算器会分别展示模型权重、KV Cache、运行时开销、生产建议显存，以及最低可运行和生产建议的 GPU 卡数。结果用于架构前期讨论，不替代推理框架实测、硬件兼容性验证与正式 POC。
+计算器会分别展示模型权重、KV Cache、框架开销、总显存需求、工程建议 GPU 卡数、最大并发、服务器节点、并行策略与网络建议。展开“私有化部署与云 API 成本分析”后，还可以比较硬件投入、月度本地成本、月度云端成本、盈亏平衡点和预计回本周期。结果用于架构前期讨论，不替代推理框架实测、硬件兼容性验证与正式 POC。
 
 ### 宇宙规则
 
@@ -74,7 +74,7 @@ It is not only an encyclopedia of what exists. It is designed to answer a more u
 
 The homepage includes a focused deployment sizing calculator with 16 mainstream models whose public parameter counts support meaningful local-inference estimates. The shortlist spans DeepSeek, Qwen, Kimi, GLM, MiniMax, GPT‑OSS, Llama, Mistral, Nemotron, and Seed‑OSS families.
 
-Adjust weight precision, working context, peak concurrency, KV-cache precision, production headroom, and per-GPU usable memory. The calculator breaks the estimate into model weights, KV cache, runtime overhead, recommended VRAM, minimum viable GPU count, and a production-oriented GPU plan.
+Adjust weight precision, working context, peak concurrency, KV-cache precision, inference-framework overhead, and per-GPU usable memory. The calculator breaks the estimate into model weights, KV cache, total VRAM, practical GPU count, concurrency ceiling, node topology, parallel strategy, and network guidance. An expandable economics section compares private deployment with cloud APIs, including hardware investment, monthly cost, break-even volume, and estimated payback.
 
 Results are early architecture estimates—not a substitute for inference-framework benchmarks, hardware compatibility validation, or a production POC.
 
