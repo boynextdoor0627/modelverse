@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-08-31",
+  "generatedAt": "2026-09-07",
   "final": {
-    "modelCount": 2727,
+    "modelCount": 2762,
     "companyCount": 70,
     "sourceCounts": {
       "curated": 21,
-      "openrouter": 350,
-      "huggingface": 2356
+      "openrouter": 381,
+      "huggingface": 2360
     },
     "lifecycleCounts": {
-      "stable": 2641,
-      "preview": 81,
-      "deprecated": 5
+      "stable": 2672,
+      "preview": 82,
+      "deprecated": 8
     }
   },
   "intake": {
@@ -22,34 +22,34 @@
       "duplicates": 0
     },
     "openrouter": {
-      "examined": 396,
-      "accepted": 350,
-      "rejected": 37,
+      "examined": 430,
+      "accepted": 381,
+      "rejected": 40,
       "duplicates": 9
     },
     "huggingface": {
-      "examined": 3267,
-      "accepted": 2356,
-      "rejected": 875,
-      "duplicates": 36
+      "examined": 3274,
+      "accepted": 2360,
+      "rejected": 877,
+      "duplicates": 37
     }
   },
   "excludedByLimit": 0,
   "companyCounts": {
     "EleutherAI": 300,
     "Allen Institute for AI": 231,
-    "NVIDIA": 222,
-    "Alibaba": 170,
+    "NVIDIA": 227,
+    "Alibaba": 169,
     "Microsoft": 153,
     "IBM": 104,
+    "OpenAI": 95,
     "DeepSeek": 78,
     "Nous Research": 77,
-    "Zhipu AI": 75,
+    "Zhipu AI": 73,
     "OpenBMB": 68,
-    "Google DeepMind": 63,
-    "OpenAI": 62,
+    "Google DeepMind": 65,
+    "InclusionAI": 62,
     "TII": 60,
-    "InclusionAI": 59,
     "Tokyo Tech": 58,
     "H2O.ai": 57,
     "Meta": 53,
@@ -61,12 +61,12 @@
     "Tencent": 38,
     "BigScience": 36,
     "SCB 10X": 33,
-    "Anthropic": 30,
     "ByteDance": 30,
     "BigCode": 30,
+    "Anthropic": 29,
     "Rinna": 29,
-    "Mistral AI": 28,
     "01.AI": 25,
+    "Mistral AI": 23,
     "TinyLlama": 23,
     "SpeakLeash": 22,
     "MiniMax": 20,
@@ -84,26 +84,26 @@
     "SK Telecom": 11,
     "Baichuan": 11,
     "StepFun": 10,
-    "xAI": 6,
+    "xAI": 7,
     "Thinking Machines": 6,
     "GSAI": 6,
-    "NAVER": 6,
     "Sarvam AI": 6,
+    "NAVER": 6,
     "Perplexity": 5,
     "State Spaces": 5,
     "Aion Labs": 4,
     "Cohere": 4,
-    "Kuaishou": 3,
     "InternScience": 3,
     "Snowflake": 3,
+    "Inception": 2,
     "Sakana AI": 2,
+    "Kuaishou": 2,
     "Nexa AI": 2,
     "Reka AI": 2,
     "Relace": 2,
     "Morph": 2,
     "Meituan": 1,
     "Arcee AI": 1,
-    "Inception": 1,
     "Writer": 1,
     "Baidu": 1
   },
