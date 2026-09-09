@@ -36,7 +36,8 @@ MODELVERSE 是一个面向开发者与企业的 **AI 模型生态可视化导航
 | **模型详情** | 先呈现简介、推荐与不推荐场景，再展示核心优势、主要限制、价格、上下文、开源协议、部署方式、更新时间和官方来源。 |
 | **模型比较** | 将候选模型加入比较区，从能力、成本、上下文、许可和部署条件等维度辅助选型。 |
 | **Agent 生态** | 单独探索 Agent 产品以及 Agent 与基础模型、开发公司的生态关系。 |
-| **部署选型计算器** | 在首页估算主流开源模型的权重、KV Cache、总显存、GPU 数量、节点拓扑、并行策略和网络需求。 |
+| **部署选型计算器** | 在首页估算主流开源模型的权重、并发 KV Cache、总显存、GPU 数量、节点拓扑、并行策略和网络需求。 |
+| **推理性能估算** | 结合 GPU 显存带宽、BF16 算力、框架效率和多卡通信，估算 Decode、TTFT 与单次请求时延。 |
 | **成本分析** | 比较私有化部署与云 API 的硬件投入、月度成本、盈亏平衡量和预计回本周期。 |
 | **双语与多端体验** | 提供中文／English 切换，并针对桌面与移动设备设计响应式交互。 |
 | **沉浸式体验** | 深空星云背景、持续运行的轨道动画与可控制的宇宙环境音乐，共同构成探索氛围。 |
@@ -67,12 +68,15 @@ MODELVERSE 是一个面向开发者与企业的 **AI 模型生态可视化导航
 
 - 模型权重、KV Cache、框架开销与总显存需求
 - 工程建议 GPU 卡数与最大并发
+- 单请求 Decode 速度、首 Token 延迟和请求总时延
 - 单机／多机节点拓扑与并行策略
 - 节点间网络建议
 - 私有化部署和云 API 月度成本比较
 - 盈亏平衡调用量与预计回本周期
 
-> 计算结果用于架构前期讨论，不替代推理框架实测、硬件兼容性验证和正式 POC。
+显存始终按总驻留参数计算；MoE 模型只在性能估算中使用激活参数近似。KV Cache 会随上下文和峰值并发增长。具有公开架构参数的模型使用层数、KV 头数和头维度公式，其余模型使用明确标注的保守经验值。
+
+> 计算结果用于架构前期讨论。性能结果属于带宽／算力 Roofline 估算，不替代推理框架实测、硬件兼容性验证和正式 POC。
 
 ## 数据可信度
 
@@ -97,7 +101,7 @@ MODELVERSE is a visual navigation and decision platform for the AI model ecosyst
 - Filters for model type, company, development country or region, and use case
 - Structured company overviews and suitability-first model profiles
 - Multi-model comparison for technical and business decisions
-- Homepage deployment calculator for VRAM, GPU, topology, and cost estimates
+- Homepage deployment calculator for VRAM, concurrent KV cache, GPU, topology, roofline performance, and cost estimates
 - Dedicated Agent ecosystem navigation
 - Bilingual Chinese and English experience across desktop and mobile
 - Auditable catalog pipeline that distinguishes first-party evidence from third-party listings
