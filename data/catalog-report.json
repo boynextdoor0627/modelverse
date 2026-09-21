@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-09-14",
+  "generatedAt": "2026-09-21",
   "final": {
-    "modelCount": 2783,
+    "modelCount": 2782,
     "companyCount": 70,
     "sourceCounts": {
       "curated": 21,
-      "openrouter": 391,
-      "huggingface": 2371
+      "openrouter": 388,
+      "huggingface": 2373
     },
     "lifecycleCounts": {
-      "stable": 2698,
-      "preview": 81,
-      "deprecated": 4
+      "stable": 2688,
+      "preview": 79,
+      "deprecated": 15
     }
   },
   "intake": {
@@ -22,33 +22,33 @@
       "duplicates": 0
     },
     "openrouter": {
-      "examined": 445,
-      "accepted": 391,
-      "rejected": 45,
+      "examined": 446,
+      "accepted": 388,
+      "rejected": 49,
       "duplicates": 9
     },
     "huggingface": {
-      "examined": 3291,
-      "accepted": 2371,
-      "rejected": 883,
+      "examined": 3292,
+      "accepted": 2373,
+      "rejected": 882,
       "duplicates": 37
     }
   },
   "excludedByLimit": 0,
   "companyCounts": {
     "EleutherAI": 300,
-    "NVIDIA": 231,
+    "NVIDIA": 232,
     "Allen Institute for AI": 231,
-    "Alibaba": 169,
+    "Alibaba": 171,
     "Microsoft": 153,
     "IBM": 104,
-    "OpenAI": 95,
+    "OpenAI": 93,
     "DeepSeek": 80,
+    "Zhipu AI": 77,
     "Nous Research": 76,
-    "Zhipu AI": 75,
     "OpenBMB": 74,
-    "Google DeepMind": 65,
     "InclusionAI": 65,
+    "Google DeepMind": 63,
     "TII": 60,
     "Tokyo Tech": 58,
     "H2O.ai": 57,
@@ -65,7 +65,7 @@
     "BigCode": 30,
     "Anthropic": 29,
     "Rinna": 29,
-    "Mistral AI": 28,
+    "Mistral AI": 27,
     "01.AI": 25,
     "TinyLlama": 23,
     "SpeakLeash": 22,
@@ -85,9 +85,9 @@
     "Baichuan": 11,
     "StepFun": 10,
     "xAI": 7,
-    "Thinking Machines": 6,
-    "Sarvam AI": 6,
     "GSAI": 6,
+    "Sarvam AI": 6,
+    "Thinking Machines": 5,
     "Perplexity": 5,
     "State Spaces": 5,
     "NAVER": 5,
