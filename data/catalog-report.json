@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-09-28",
+  "generatedAt": "2026-10-05",
   "final": {
-    "modelCount": 2795,
-    "companyCount": 69,
+    "modelCount": 2804,
+    "companyCount": 70,
     "sourceCounts": {
       "curated": 21,
-      "openrouter": 396,
-      "huggingface": 2378
+      "openrouter": 402,
+      "huggingface": 2381
     },
     "lifecycleCounts": {
-      "stable": 2690,
+      "stable": 2696,
       "preview": 78,
-      "deprecated": 27
+      "deprecated": 30
     }
   },
   "intake": {
@@ -22,14 +22,14 @@
       "duplicates": 0
     },
     "openrouter": {
-      "examined": 458,
-      "accepted": 396,
-      "rejected": 52,
+      "examined": 466,
+      "accepted": 402,
+      "rejected": 54,
       "duplicates": 10
     },
     "huggingface": {
-      "examined": 3297,
-      "accepted": 2378,
+      "examined": 3300,
+      "accepted": 2381,
       "rejected": 882,
       "duplicates": 37
     }
@@ -37,13 +37,13 @@
   "excludedByLimit": 0,
   "companyCounts": {
     "EleutherAI": 300,
-    "NVIDIA": 232,
-    "Allen Institute for AI": 231,
+    "NVIDIA": 234,
+    "Allen Institute for AI": 233,
     "Alibaba": 171,
     "Microsoft": 153,
+    "OpenAI": 104,
     "IBM": 104,
-    "OpenAI": 102,
-    "DeepSeek": 78,
+    "DeepSeek": 77,
     "Zhipu AI": 76,
     "Nous Research": 76,
     "OpenBMB": 74,
@@ -61,9 +61,9 @@
     "Hugging Face": 39,
     "BigScience": 36,
     "SCB 10X": 33,
+    "Anthropic": 31,
     "ByteDance": 30,
     "BigCode": 30,
-    "Anthropic": 29,
     "Rinna": 29,
     "Mistral AI": 28,
     "01.AI": 25,
@@ -97,6 +97,7 @@
     "InternScience": 3,
     "Snowflake": 3,
     "Inception": 2,
+    "Nexa AI": 2,
     "Reka AI": 2,
     "Relace": 2,
     "Morph": 2,
