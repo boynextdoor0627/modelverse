@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-10-05",
+  "generatedAt": "2026-10-12",
   "final": {
-    "modelCount": 2804,
-    "companyCount": 70,
+    "modelCount": 2806,
+    "companyCount": 68,
     "sourceCounts": {
       "curated": 21,
-      "openrouter": 402,
-      "huggingface": 2381
+      "openrouter": 395,
+      "huggingface": 2390
     },
     "lifecycleCounts": {
-      "stable": 2696,
-      "preview": 78,
-      "deprecated": 30
+      "stable": 2710,
+      "preview": 79,
+      "deprecated": 17
     }
   },
   "intake": {
@@ -22,14 +22,14 @@
       "duplicates": 0
     },
     "openrouter": {
-      "examined": 466,
-      "accepted": 402,
-      "rejected": 54,
+      "examined": 458,
+      "accepted": 395,
+      "rejected": 53,
       "duplicates": 10
     },
     "huggingface": {
-      "examined": 3300,
-      "accepted": 2381,
+      "examined": 3309,
+      "accepted": 2390,
       "rejected": 882,
       "duplicates": 37
     }
@@ -37,21 +37,21 @@
   "excludedByLimit": 0,
   "companyCounts": {
     "EleutherAI": 300,
+    "Allen Institute for AI": 239,
     "NVIDIA": 234,
-    "Allen Institute for AI": 233,
-    "Alibaba": 171,
+    "Alibaba": 159,
     "Microsoft": 153,
-    "OpenAI": 104,
+    "OpenAI": 106,
     "IBM": 104,
     "DeepSeek": 77,
     "Zhipu AI": 76,
     "Nous Research": 76,
     "OpenBMB": 74,
+    "Google DeepMind": 64,
     "InclusionAI": 64,
-    "Google DeepMind": 63,
     "TII": 60,
+    "H2O.ai": 58,
     "Tokyo Tech": 58,
-    "H2O.ai": 57,
     "Meta": 53,
     "Shanghai AI Lab": 51,
     "Salesforce": 50,
@@ -60,30 +60,30 @@
     "Tencent": 39,
     "Hugging Face": 39,
     "BigScience": 36,
+    "Anthropic": 33,
     "SCB 10X": 33,
-    "Anthropic": 31,
     "ByteDance": 30,
     "BigCode": 30,
+    "Mistral AI": 29,
     "Rinna": 29,
-    "Mistral AI": 28,
     "01.AI": 25,
     "TinyLlama": 23,
     "SpeakLeash": 22,
     "Preferred Networks": 21,
     "Xiaomi": 19,
+    "Amazon": 19,
     "Moonshot AI": 18,
     "MiniMax": 17,
     "Upstage": 17,
-    "Amazon": 17,
     "Apple": 17,
     "Stanford CRFM": 15,
     "LG AI Research": 14,
     "SB Intuitions": 13,
     "Poolside": 12,
+    "StepFun": 11,
     "Swiss AI": 11,
     "SK Telecom": 11,
     "Baichuan": 11,
-    "StepFun": 10,
     "xAI": 8,
     "Aion Labs": 6,
     "GSAI": 6,
@@ -102,10 +102,8 @@
     "Relace": 2,
     "Morph": 2,
     "Meituan": 1,
-    "Kuaishou": 1,
     "Arcee AI": 1,
-    "Writer": 1,
-    "Baidu": 1
+    "Writer": 1
   },
   "rules": {
     "maximumModels": 3000,
