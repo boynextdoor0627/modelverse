@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-10-12",
+  "generatedAt": "2026-10-19",
   "final": {
-    "modelCount": 2806,
+    "modelCount": 2824,
     "companyCount": 68,
     "sourceCounts": {
       "curated": 21,
-      "openrouter": 395,
-      "huggingface": 2390
+      "openrouter": 398,
+      "huggingface": 2405
     },
     "lifecycleCounts": {
-      "stable": 2710,
+      "stable": 2729,
       "preview": 79,
-      "deprecated": 17
+      "deprecated": 16
     }
   },
   "intake": {
@@ -22,46 +22,46 @@
       "duplicates": 0
     },
     "openrouter": {
-      "examined": 458,
-      "accepted": 395,
-      "rejected": 53,
+      "examined": 471,
+      "accepted": 398,
+      "rejected": 63,
       "duplicates": 10
     },
     "huggingface": {
-      "examined": 3309,
-      "accepted": 2390,
-      "rejected": 882,
+      "examined": 3337,
+      "accepted": 2405,
+      "rejected": 895,
       "duplicates": 37
     }
   },
   "excludedByLimit": 0,
   "companyCounts": {
     "EleutherAI": 300,
+    "NVIDIA": 240,
     "Allen Institute for AI": 239,
-    "NVIDIA": 234,
-    "Alibaba": 159,
-    "Microsoft": 153,
+    "Alibaba": 160,
+    "Microsoft": 154,
     "OpenAI": 106,
-    "IBM": 104,
-    "DeepSeek": 77,
+    "IBM": 106,
+    "DeepSeek": 78,
     "Zhipu AI": 76,
     "Nous Research": 76,
-    "OpenBMB": 74,
-    "Google DeepMind": 64,
-    "InclusionAI": 64,
+    "OpenBMB": 76,
+    "Google DeepMind": 66,
+    "InclusionAI": 63,
     "TII": 60,
     "H2O.ai": 58,
     "Tokyo Tech": 58,
     "Meta": 53,
     "Shanghai AI Lab": 51,
     "Salesforce": 50,
-    "Liquid AI": 44,
+    "Liquid AI": 47,
+    "Tencent": 40,
     "Stability AI": 40,
-    "Tencent": 39,
     "Hugging Face": 39,
     "BigScience": 36,
-    "Anthropic": 33,
     "SCB 10X": 33,
+    "Anthropic": 32,
     "ByteDance": 30,
     "BigCode": 30,
     "Mistral AI": 29,
@@ -94,7 +94,7 @@
     "Cohere": 4,
     "Sakana AI": 4,
     "Thinking Machines": 4,
-    "InternScience": 3,
+    "InternScience": 4,
     "Snowflake": 3,
     "Inception": 2,
     "Nexa AI": 2,
