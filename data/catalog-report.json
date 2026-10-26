@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-10-19",
+  "generatedAt": "2026-10-26",
   "final": {
-    "modelCount": 2824,
+    "modelCount": 2827,
     "companyCount": 68,
     "sourceCounts": {
       "curated": 21,
-      "openrouter": 398,
-      "huggingface": 2405
+      "openrouter": 393,
+      "huggingface": 2413
     },
     "lifecycleCounts": {
-      "stable": 2729,
+      "stable": 2736,
       "preview": 79,
-      "deprecated": 16
+      "deprecated": 12
     }
   },
   "intake": {
@@ -22,40 +22,40 @@
       "duplicates": 0
     },
     "openrouter": {
-      "examined": 471,
-      "accepted": 398,
-      "rejected": 63,
+      "examined": 467,
+      "accepted": 393,
+      "rejected": 64,
       "duplicates": 10
     },
     "huggingface": {
-      "examined": 3337,
-      "accepted": 2405,
-      "rejected": 895,
+      "examined": 3353,
+      "accepted": 2413,
+      "rejected": 903,
       "duplicates": 37
     }
   },
   "excludedByLimit": 0,
   "companyCounts": {
     "EleutherAI": 300,
-    "NVIDIA": 240,
+    "NVIDIA": 242,
     "Allen Institute for AI": 239,
     "Alibaba": 160,
     "Microsoft": 154,
-    "OpenAI": 106,
     "IBM": 106,
-    "DeepSeek": 78,
+    "OpenAI": 103,
+    "DeepSeek": 77,
     "Zhipu AI": 76,
     "Nous Research": 76,
     "OpenBMB": 76,
-    "Google DeepMind": 66,
-    "InclusionAI": 63,
+    "InclusionAI": 66,
+    "Google DeepMind": 63,
     "TII": 60,
     "H2O.ai": 58,
     "Tokyo Tech": 58,
     "Meta": 53,
     "Shanghai AI Lab": 51,
     "Salesforce": 50,
-    "Liquid AI": 47,
+    "Liquid AI": 48,
     "Tencent": 40,
     "Stability AI": 40,
     "Hugging Face": 39,
@@ -70,10 +70,10 @@
     "TinyLlama": 23,
     "SpeakLeash": 22,
     "Preferred Networks": 21,
+    "Moonshot AI": 19,
     "Xiaomi": 19,
     "Amazon": 19,
-    "Moonshot AI": 18,
-    "MiniMax": 17,
+    "MiniMax": 18,
     "Upstage": 17,
     "Apple": 17,
     "Stanford CRFM": 15,
@@ -90,13 +90,13 @@
     "Sarvam AI": 6,
     "Perplexity": 5,
     "State Spaces": 5,
+    "InternScience": 5,
     "NAVER": 5,
     "Cohere": 4,
     "Sakana AI": 4,
     "Thinking Machines": 4,
-    "InternScience": 4,
+    "Inception": 3,
     "Snowflake": 3,
-    "Inception": 2,
     "Nexa AI": 2,
     "Reka AI": 2,
     "Relace": 2,
