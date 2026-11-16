@@ -1,17 +1,17 @@
 {
-  "generatedAt": "2026-11-09",
+  "generatedAt": "2026-11-16",
   "final": {
-    "modelCount": 2828,
-    "companyCount": 66,
+    "modelCount": 2845,
+    "companyCount": 67,
     "sourceCounts": {
       "curated": 21,
-      "openrouter": 379,
-      "huggingface": 2428
+      "openrouter": 385,
+      "huggingface": 2439
     },
     "lifecycleCounts": {
-      "stable": 2741,
-      "preview": 79,
-      "deprecated": 8
+      "stable": 2745,
+      "preview": 82,
+      "deprecated": 18
     }
   },
   "intake": {
@@ -22,16 +22,16 @@
       "duplicates": 0
     },
     "openrouter": {
-      "examined": 461,
-      "accepted": 379,
-      "rejected": 72,
+      "examined": 468,
+      "accepted": 385,
+      "rejected": 73,
       "duplicates": 10
     },
     "huggingface": {
-      "examined": 3372,
-      "accepted": 2428,
+      "examined": 3381,
+      "accepted": 2439,
       "rejected": 911,
-      "duplicates": 33
+      "duplicates": 31
     }
   },
   "excludedByLimit": 0,
@@ -41,14 +41,14 @@
     "Allen Institute for AI": 239,
     "Alibaba": 160,
     "Microsoft": 155,
-    "IBM": 106,
+    "IBM": 108,
     "OpenAI": 100,
     "DeepSeek": 79,
-    "Zhipu AI": 78,
+    "Zhipu AI": 77,
     "OpenBMB": 76,
     "Nous Research": 75,
-    "InclusionAI": 68,
-    "Google DeepMind": 65,
+    "Google DeepMind": 69,
+    "InclusionAI": 69,
     "TII": 60,
     "H2O.ai": 58,
     "Tokyo Tech": 58,
@@ -60,17 +60,17 @@
     "Stability AI": 40,
     "Hugging Face": 39,
     "BigScience": 36,
+    "Anthropic": 34,
     "SCB 10X": 33,
-    "Anthropic": 32,
-    "ByteDance": 31,
     "BigCode": 30,
     "Rinna": 29,
+    "ByteDance": 28,
+    "SpeakLeash": 28,
     "01.AI": 25,
     "Mistral AI": 24,
     "TinyLlama": 23,
-    "SpeakLeash": 22,
     "Preferred Networks": 22,
-    "Moonshot AI": 19,
+    "Moonshot AI": 20,
     "Xiaomi": 19,
     "Amazon": 19,
     "MiniMax": 17,
@@ -88,6 +88,7 @@
     "Aion Labs": 6,
     "GSAI": 6,
     "Sarvam AI": 6,
+    "Thinking Machines": 5,
     "Perplexity": 5,
     "State Spaces": 5,
     "InternScience": 5,
@@ -95,9 +96,9 @@
     "Cohere": 4,
     "Sakana AI": 4,
     "Morph": 4,
-    "Thinking Machines": 3,
+    "Nexa AI": 3,
     "Snowflake": 3,
-    "Nexa AI": 2,
+    "Baidu": 2,
     "Reka AI": 2,
     "Relace": 2,
     "Meituan": 1,
